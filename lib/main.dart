@@ -1,4 +1,5 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:event_mi_skill/src/features/presentation/event_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'src/features/presentation/home_page.dart';
@@ -57,15 +58,9 @@ class _MainPageState extends State<MainPage> {
   // List of pages for navigation
   final List<Widget> _pages = [
     const HomePage(),
+    const EventPage(),
     const Scaffold(
-      body: Center(
-        child: Text(
-          'Search Page',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-      ),
-    ),
-    const Scaffold(
+      extendBody: true,
       body: Center(
         child: Text(
           'Favorites Page',
@@ -81,7 +76,7 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     final items = <Widget>[
       const Icon(Icons.home_outlined, size: 30, color: Colors.white),
-      const Icon(Icons.search, size: 30, color: Colors.white),
+      const Icon(Icons.event, size: 30, color: Colors.white),
       const Icon(Icons.favorite_border, size: 30, color: Colors.white),
       const Icon(Icons.settings_outlined, size: 30, color: Colors.white),
       const Icon(Icons.person_outline, size: 30, color: Colors.white),
@@ -92,10 +87,10 @@ class _MainPageState extends State<MainPage> {
       bottomNavigationBar: CurvedNavigationBar(
         items: items,
         index: _selectedIndex,
-        height: 60.h,
+        height: 60.0, // Using fixed height instead of .h extension
         color: Colors.black,
         buttonBackgroundColor: Colors.red,
-        backgroundColor: const Color.fromARGB(0, 22, 107, 110),
+        backgroundColor: Colors.transparent, // Changed to transparent
         animationCurve: Curves.easeInOut,
         animationDuration: const Duration(milliseconds: 300),
         letIndexChange: (index) => true,
