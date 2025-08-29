@@ -127,8 +127,15 @@ class EventProvider with ChangeNotifier {
 
   // Search events
   void searchEvents(String query) {
-    _searchQuery = query;
-    _applyFilters();
+    _setLoading(true);
+    try {
+      _searchQuery = query.trim();
+      _applyFilters();
+    } catch (e) {
+      _setError('Error performing search: ${e.toString()}');
+    } finally {
+      _setLoading(false);
+    }
   }
 
   // Filter by category
@@ -261,29 +268,33 @@ class EventProvider with ChangeNotifier {
 
   // Private helper methods
   void _applyFilters() {
-    List<Event> filtered = List.from(_events);
+    try {
+      List<Event> filtered = List.from(_events);
 
-    // Apply category filter
-    if (_selectedCategory != null) {
-      filtered = filtered.where((event) => event.category == _selectedCategory).toList();
+      // Apply category filter
+      if (_selectedCategory != null) {
+        filtered = filtered.where((event) => event.category == _selectedCategory).toList();
+      }
+
+      // Apply search filter if query exists
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        filtered = filtered.where((event) {
+          return event.title.toLowerCase().contains(query) ||
+                event.description.toLowerCase().contains(query) ||
+                event.venue.toLowerCase().contains(query) ||
+                event.tags.any((tag) => tag.toLowerCase().contains(query));
+        }).toList();
+      }
+
+      // Sort by date (upcoming first)
+      filtered.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+      _filteredEvents = filtered;
+    } catch (e) {
+      _setError('Error applying filters: ${e.toString()}');
+    } finally {
+      notifyListeners();
     }
-
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
-      filtered = filtered.where((event) {
-        return event.title.toLowerCase().contains(query) ||
-               event.description.toLowerCase().contains(query) ||
-               event.venue.toLowerCase().contains(query) ||
-               event.tags.any((tag) => tag.toLowerCase().contains(query));
-      }).toList();
-    }
-
-    // Sort by date (upcoming first)
-    filtered.sort((a, b) => a.dateTime.compareTo(b.dateTime));
-
-    _filteredEvents = filtered;
-    notifyListeners();
   }
 
   void _setLoading(bool loading) {

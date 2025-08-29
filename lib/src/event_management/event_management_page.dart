@@ -196,7 +196,7 @@ class _EventManagementPageState extends State<EventManagementPage> {
 
   Widget _buildCategoryFilter(EventProvider eventProvider) {
     return SizedBox(
-      height: 45,
+      height: 40,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: EventCategory.values.length + 1,
@@ -242,12 +242,15 @@ class _EventManagementPageState extends State<EventManagementPage> {
             ),
           ],
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.poppins(
-            color: isSelected ? Colors.white : color,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: isSelected ? Colors.white : color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+            ),
           ),
         ),
       ),
