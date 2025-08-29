@@ -393,10 +393,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCategoryFilter() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final containerWidth = screenWidth > 800 
-        ? screenWidth * 0.8 
-        : MediaQuery.of(context).size.width * 0.9;
+    final containerWidth = MediaQuery.of(context).size.width * 0.8;
     
     return SizedBox(
       width: containerWidth,
