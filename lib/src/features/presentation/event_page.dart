@@ -11,6 +11,10 @@ class EventPage extends StatefulWidget {
 class _EventPageState extends State<EventPage> {
   final TextEditingController _searchController = TextEditingController();
   int _selectedCategory = 0;
+  double _minRating = 0.0;
+  double _maxPrice = 100.0;
+  bool _showFreeOnly = false;
+  String _searchQuery = '';
   final List<String> _categories = ['All', 'Popular', 'Trending', 'Upcoming', 'Nearby'];
   final List<Map<String, dynamic>> _events = [
     {
@@ -44,6 +48,16 @@ class _EventPageState extends State<EventPage> {
       'category': 'Trending',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +200,7 @@ class _EventPageState extends State<EventPage> {
             child: IconButton(
               icon: const Icon(Icons.filter_list, color: Colors.white, size: 20),
               onPressed: () {
-                // Show filter options
+                _showFilterDialog();
               },
             ),
           ),
@@ -257,10 +271,42 @@ class _EventPageState extends State<EventPage> {
     );
   }
 
+  List<Map<String, dynamic>> _getFilteredEvents() {
+    return _events.where((event) {
+      // Filter by category
+      if (_selectedCategory > 0 && event['category'] != _categories[_selectedCategory]) {
+        return false;
+      }
+      
+      // Filter by search query
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        if (!event['title'].toLowerCase().contains(query) &&
+            !event['location'].toLowerCase().contains(query) &&
+            !event['category'].toLowerCase().contains(query)) {
+          return false;
+        }
+      }
+      
+      // Filter by rating
+      if (event['rating'] < _minRating) {
+        return false;
+      }
+      
+      // Filter by price
+      if (_showFreeOnly && event['price'] > 0) {
+        return false;
+      }
+      if (event['price'] > _maxPrice) {
+        return false;
+      }
+      
+      return true;
+    }).toList();
+  }
+
   List<Widget> _buildEventList() {
-    final filteredEvents = _selectedCategory == 0
-        ? _events
-        : _events.where((event) => event['category'] == _categories[_selectedCategory]).toList();
+    final filteredEvents = _getFilteredEvents();
 
     if (filteredEvents.isEmpty) {
       return [
@@ -560,6 +606,144 @@ class _EventPageState extends State<EventPage> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showFilterDialog() {
+    double tempMinRating = _minRating;
+    double tempMaxPrice = _maxPrice;
+    bool tempShowFreeOnly = _showFreeOnly;
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                'Filter Events',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Minimum Rating: ${tempMinRating.toStringAsFixed(1)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Slider(
+                      value: tempMinRating,
+                      min: 0,
+                      max: 5,
+                      divisions: 10,
+                      label: tempMinRating.toStringAsFixed(1),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          tempMinRating = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Maximum Price: \$${tempMaxPrice.toInt()}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Slider(
+                      value: tempMaxPrice,
+                      min: 0,
+                      max: 200,
+                      divisions: 20,
+                      label: '\$${tempMaxPrice.toInt()}',
+                      onChanged: (value) {
+                        setDialogState(() {
+                          tempMaxPrice = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: tempShowFreeOnly,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              tempShowFreeOnly = value ?? false;
+                            });
+                          },
+                        ),
+                        Text(
+                          'Show free events only',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setDialogState(() {
+                      tempMinRating = 0.0;
+                      tempMaxPrice = 100.0;
+                      tempShowFreeOnly = false;
+                    });
+                  },
+                  child: Text(
+                    'RESET',
+                    style: GoogleFonts.poppins(
+                      color: Colors.orange[600],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'CANCEL',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _minRating = tempMinRating;
+                      _maxPrice = tempMaxPrice;
+                      _showFreeOnly = tempShowFreeOnly;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'APPLY',
+                    style: GoogleFonts.poppins(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
