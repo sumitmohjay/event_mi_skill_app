@@ -48,6 +48,11 @@ dependencies:
   
   # Network
   dio: ^5.4.0
+  
+  # Reporting & Analytics
+  excel: ^2.1.0
+  pdf: ^3.10.9
+  file_saver: ^0.3.1
   pretty_dio_logger: ^1.4.0
   
   # Local Storage
@@ -58,6 +63,8 @@ dependencies:
   
   # Utils
   logger: ^2.0.2
+  share_plus: ^7.2.1
+  cross_file: ^0.3.4
   dartz: ^0.10.1
   url_launcher: ^6.2.2
   image_picker: ^1.0.7

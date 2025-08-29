@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../event_management/event_management_page.dart';
+import '../../notifications/notification_management_page.dart';
+import '../../reporting_analytics/reporting_analytics_page.dart';
 
 class EventOrganizerProfilePage extends StatefulWidget {
   const EventOrganizerProfilePage({super.key});
@@ -399,13 +401,19 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
         'color': Colors.blue,
         'onTap': () => _navigateToEventManagement(context),
       },
-
       {
         'icon': Icons.notifications,
-        'title': 'Notifications',
-        'subtitle': 'Manage event notifications and reminders',
+        'title': 'Add Notification',
+        'subtitle': 'Create and manage notifications',
         'color': Colors.red,
-        'onTap': () => _showComingSoon(context, 'Notifications'),
+        'onTap': () => _navigateToNotificationManagement(context),
+      },
+      {
+        'icon': Icons.analytics,
+        'title': 'Reporting & Analytics',
+        'subtitle': 'View and export event reports',
+        'color': Colors.purple,
+        'onTap': () => _navigateToReportingAnalytics(context),
       },
     ];
 
@@ -472,12 +480,18 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -575,13 +589,17 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
     );
   }
 
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature - Coming Soon!'),
-        backgroundColor: Colors.blue,
-        behavior: SnackBarBehavior.floating,
-      ),
+  void _navigateToNotificationManagement(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NotificationManagementPage()),
+    );
+  }
+
+  void _navigateToReportingAnalytics(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ReportingAnalyticsPage()),
     );
   }
 
