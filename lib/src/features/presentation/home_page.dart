@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'event_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -72,206 +73,50 @@ class _HomePageState extends State<HomePage> {
 
   final List<Map<String, dynamic>> _pastEvents = [
     {
-      'title': 'AI Workshop',
-      'date': '25 AUG',
-      'time': '2:00 PM - 6:00 PM',
-      'attendees': 95,
-      'category': 'Technical',
-    },
-    {
-      'title': 'Art Exhibition',
-      'date': '26 AUG',
-      'time': '6:00 PM - 11:00 PM',
-      'attendees': 150,
-      'category': 'Cultural',
-    },
-    {
-      'title': 'Business Summit',
-      'date': '27 AUG',
-      'time': '9:00 AM - 5:00 PM',
-      'attendees': 200,
+      'title': 'Digital Marketing Course',
+      'date': '20 AUG',
+      'time': '10:00 AM - 4:00 PM',
+      'attendees': 85,
       'category': 'Academic',
+      'image': 'https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=400&h=200&fit=crop',
     },
     {
-      'title': 'Music Festival',
-      'date': '28 AUG',
-      'time': '7:00 PM - 12:00 AM',
-      'attendees': 300,
+      'title': 'Web Development Bootcamp',
+      'date': '18 AUG',
+      'time': '9:00 AM - 6:00 PM',
+      'attendees': 120,
+      'category': 'Technical',
+      'image': 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=200&fit=crop',
+    },
+    {
+      'title': 'Photography Workshop',
+      'date': '15 AUG',
+      'time': '2:00 PM - 5:00 PM',
+      'attendees': 45,
       'category': 'Cultural',
+      'image': 'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=400&h=200&fit=crop',
+    },
+    {
+      'title': 'Business Analytics Course',
+      'date': '12 AUG',
+      'time': '11:00 AM - 3:00 PM',
+      'attendees': 75,
+      'category': 'Academic',
+      'image': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop',
     },
   ];
 
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isWeb = screenWidth > 800;
-    
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFF),
-      body: isWeb ? _buildWebLayout() : _buildMobileLayout(),
+      body: _buildResponsiveContent(),
     );
   }
 
-  Widget _buildWebLayout() {
-    return Row(
-      children: [
-        // Sidebar
-        Container(
-          width: 280,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x1A000000),
-                blurRadius: 10,
-                offset: Offset(2, 0),
-              ),
-            ],
-          ),
-          child: _buildSidebar(),
-        ),
-        // Main content
-        Expanded(
-          child: _buildMainContent(),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildMobileLayout() {
-    return _buildMainContent();
-  }
-
-  Widget _buildSidebar() {
-    return Column(
-      children: [
-        const SizedBox(height: 40),
-        // Logo/Title
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6C5CE7), Color(0xFFA29BFE)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.event, color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Events',
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2D3436),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        // Navigation items
-        _buildNavItem(Icons.home, 'Dashboard', true),
-        _buildNavItem(Icons.event, 'Events', false),
-        _buildNavItem(Icons.calendar_today, 'Calendar', false),
-        _buildNavItem(Icons.people, 'Attendees', false),
-        _buildNavItem(Icons.analytics, 'Analytics', false),
-        _buildNavItem(Icons.settings, 'Settings', false),
-        const Spacer(),
-        // Stats Chart
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: _buildMiniChart(),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String title, bool isActive) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF6C5CE7).withValues(alpha: 0.1) : null,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: isActive ? const Color(0xFF6C5CE7) : const Color(0xFF636E72),
-          size: 22,
-        ),
-        title: Text(
-          title,
-          style: GoogleFonts.poppins(
-            color: isActive ? const Color(0xFF6C5CE7) : const Color(0xFF636E72),
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-            fontSize: 14,
-          ),
-        ),
-        dense: true,
-      ),
-    );
-  }
-
-  Widget _buildMiniChart() {
-    return Container(
-      height: 120,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF6C5CE7).withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Event Stats',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF2D3436),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: const FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: [
-                      FlSpot(0, 3),
-                      FlSpot(1, 1),
-                      FlSpot(2, 4),
-                      FlSpot(3, 2),
-                      FlSpot(4, 5),
-                    ],
-                    isCurved: true,
-                    color: const Color(0xFF6C5CE7),
-                    barWidth: 2,
-                    dotData: const FlDotData(show: false),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainContent() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isWeb = screenWidth > 800;
-    
+  Widget _buildResponsiveContent() {
     return SingleChildScrollView(
       padding: EdgeInsets.zero,
       child: Column(
@@ -279,24 +124,23 @@ class _HomePageState extends State<HomePage> {
         children: [
           _buildGradientHeader(),
           Padding(
-            padding: EdgeInsets.all(isWeb ? 32 : 20),
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width * 0.1, // 10% padding for better responsiveness
+              vertical: MediaQuery.of(context).size.height * 0.02,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 8),
-                _buildLocationCard(),
-                const SizedBox(height: 24),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.01),
                 _buildCategoryFilter(),
-                const SizedBox(height: 24),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 _buildTodaySection(),
-                const SizedBox(height: 24),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                _buildCreateEventSection(),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 _buildUpcomingSection(),
-                const SizedBox(height: 24),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 _buildPastEventsSection(),
-                if (isWeb) ...[
-                  const SizedBox(height: 24),
-                  _buildAnalyticsSection(),
-                ],
               ],
             ),
           ),
@@ -307,10 +151,11 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildGradientHeader() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isWeb = screenWidth > 800;
+    final screenHeight = MediaQuery.of(context).size.height;
     
     return Container(
       width: double.infinity,
+      height: screenHeight * 0.18, // Increased height for more spacing
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -326,55 +171,22 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       padding: EdgeInsets.fromLTRB(
-        isWeb ? 32 : 20, 
-        MediaQuery.of(context).padding.top + 16, 
-        isWeb ? 32 : 20, 
-        32
+        screenWidth * 0.1, // 10% left padding for better responsiveness
+        MediaQuery.of(context).padding.top + screenHeight * 0.03, // Increased top padding
+        screenWidth * 0.1, // 10% right padding
+        screenHeight * 0.03 // Increased bottom padding
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center, // Center the title vertically
         children: [
-          // Header with profile - o
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.search, color: Colors.white70, size: 24),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white70, size: 24),
-              ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                child: const Icon(Icons.person, color: Colors.white, size: 20),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          
-          // Discover Events Title
+          // Header with Discover Event title - left aligned
           Text(
-            'Discover Events',
+            'Discover Event',
             style: GoogleFonts.poppins(
-              fontSize: isWeb ? 42 : 36,
+              fontSize: _getResponsiveFontSize(screenWidth, 32, 28, 24),
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          
-          // Subtitle
-          Text(
-            'Find the best events near you',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ],
@@ -382,56 +194,95 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildLocationCard() {
+  // Helper method to get responsive font sizes
+  double _getResponsiveFontSize(double screenWidth, double webSize, double tabletSize, double mobileSize) {
+    if (screenWidth > 900) return webSize;
+    if (screenWidth > 600) return tabletSize;
+    return mobileSize;
+  }
+  
+  // Helper method to get responsive sizes
+  double _getResponsiveSize(double screenWidth, double webSize, double tabletSize, double mobileSize) {
+    if (screenWidth > 900) return webSize;
+    if (screenWidth > 600) return tabletSize;
+    return mobileSize;
+  }
+
+  Widget _buildCreateEventSection() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth > 800 
-        ? screenWidth * 0.6 
-        : MediaQuery.of(context).size.width * 0.9;
     
-    return Container(
-      width: cardWidth,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEC4899), Color(0xFFF472B6)], 
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
+    return SizedBox(
+      width: screenWidth * 0.8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Text(
+            'Create An Event',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 24, 20, 18),
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2D3436),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(_getResponsiveSize(screenWidth, 24, 20, 16)),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)], 
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                Text(
-                  'Create An Event',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Create An Event',
+                        style: GoogleFonts.poppins(
+                          fontSize: _getResponsiveFontSize(screenWidth, 20, 18, 16),
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'New York, US',
+                        style: GoogleFonts.poppins(
+                          fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'New York, US',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.9),
+                Container(
+                  width: _getResponsiveSize(screenWidth, 60, 50, 45),
+                  height: _getResponsiveSize(screenWidth, 60, 50, 45),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.add, 
+                    color: Colors.white, 
+                    size: _getResponsiveSize(screenWidth, 28, 24, 20)
                   ),
                 ),
               ],
             ),
-          ),
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.add, color: Colors.white, size: 24),
           ),
         ],
       ),
@@ -440,13 +291,11 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCategoryFilter() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final containerWidth = screenWidth > 800 
-        ? screenWidth * 0.8 
-        : MediaQuery.of(context).size.width * 0.9;
+    final containerHeight = _getResponsiveSize(screenWidth, 55, 50, 45);
     
     return SizedBox(
-      width: containerWidth,
-      height: 50,
+      width: screenWidth * 0.8,
+      height: containerHeight,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _categories.length,
@@ -460,8 +309,11 @@ class _HomePageState extends State<HomePage> {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              margin: EdgeInsets.only(right: _getResponsiveSize(screenWidth, 16, 12, 8)),
+              padding: EdgeInsets.symmetric(
+                horizontal: _getResponsiveSize(screenWidth, 24, 20, 16), 
+                vertical: _getResponsiveSize(screenWidth, 14, 12, 10)
+              ),
               decoration: BoxDecoration(
                 gradient: isSelected ? const LinearGradient(
                   colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
@@ -483,7 +335,7 @@ class _HomePageState extends State<HomePage> {
                 style: GoogleFonts.poppins(
                   color: isSelected ? Colors.white : const Color(0xFF636E72),
                   fontWeight: FontWeight.w500,
-                  fontSize: 14,
+                  fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
                 ),
               ),
             ),
@@ -495,81 +347,90 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildTodaySection() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isWeb = screenWidth > 800;
+    final cardHeight = _getResponsiveSize(screenWidth, 220, 200, 180);
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Today',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF2D3436),
-              ),
-            ),
-            Row(
-              children: [
-                const Icon(Icons.location_on, color: Color(0xFF6C5CE7), size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  'Los Angeles',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: const Color(0xFF6C5CE7),
-                    fontWeight: FontWeight.w500,
-                  ),
+    return SizedBox(
+      width: screenWidth * 0.8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Today',
+                style: GoogleFonts.poppins(
+                  fontSize: _getResponsiveFontSize(screenWidth, 24, 20, 18),
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2D3436),
                 ),
-                const Icon(Icons.keyboard_arrow_right, color: Color(0xFF6C5CE7), size: 16),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 200,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _filteredTodayEvents.length,
-            itemBuilder: (context, index) {
-              final event = _filteredTodayEvents[index];
-              return _buildTodayEventCard(event, isWeb);
-            },
+              ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on, 
+                    color: const Color(0xFF6C5CE7), 
+                    size: _getResponsiveSize(screenWidth, 18, 16, 14)
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Los Angeles',
+                    style: GoogleFonts.poppins(
+                      fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+                      color: const Color(0xFF6C5CE7),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_right, 
+                    color: const Color(0xFF6C5CE7), 
+                    size: _getResponsiveSize(screenWidth, 18, 16, 14)
+                  ),
+                ],
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          SizedBox(
+            height: cardHeight,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _filteredTodayEvents.length,
+              itemBuilder: (context, index) {
+                final event = _filteredTodayEvents[index];
+                return _buildTodayEventCard(event);
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildTodayEventCard(Map<String, dynamic> event, bool isWeb) {
-    final cardWidth = isWeb ? 300.0 : MediaQuery.of(context).size.width * 0.8;
+  Widget _buildTodayEventCard(Map<String, dynamic> event) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth * 0.7; // Responsive card width
     
-    return Container(
-      width: cardWidth,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        image: const DecorationImage(
-          image: NetworkImage('https://picsum.photos/400/200?random=1'),
-          fit: BoxFit.cover,
-        ),
-      ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EventDetailPage(event: event),
+          ),
+        );
+      },
       child: Container(
+        width: cardWidth,
+        margin: const EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.black.withValues(alpha: 0.7),
-            ],
+          image: DecorationImage(
+            image: NetworkImage(event['image'] ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600'),
+            fit: BoxFit.cover,
           ),
         ),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(_getResponsiveSize(screenWidth, 24, 20, 16)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -577,7 +438,10 @@ class _HomePageState extends State<HomePage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _getResponsiveSize(screenWidth, 14, 12, 10), 
+                    vertical: _getResponsiveSize(screenWidth, 8, 6, 5)
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
@@ -587,7 +451,7 @@ class _HomePageState extends State<HomePage> {
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -603,7 +467,7 @@ class _HomePageState extends State<HomePage> {
               event['title'],
               style: GoogleFonts.poppins(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: _getResponsiveFontSize(screenWidth, 20, 18, 16),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -612,7 +476,7 @@ class _HomePageState extends State<HomePage> {
               event['time'],
               style: GoogleFonts.poppins(
                 color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 14,
+                fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
               ),
             ),
             const SizedBox(height: 8),
@@ -622,28 +486,35 @@ class _HomePageState extends State<HomePage> {
                   children: List.generate(3, (index) {
                     return Container(
                       margin: const EdgeInsets.only(right: 4),
-                      width: 24,
-                      height: 24,
+                      width: _getResponsiveSize(screenWidth, 28, 24, 20),
+                      height: _getResponsiveSize(screenWidth, 28, 24, 20),
                       decoration: BoxDecoration(
                         color: event['color'],
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: const Icon(Icons.person, color: Colors.white, size: 12),
+                      child: Icon(
+                        Icons.person, 
+                        color: Colors.white, 
+                        size: _getResponsiveSize(screenWidth, 14, 12, 10)
+                      ),
                     );
                   }),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '+${event['attendees']} Attending',
+                  '+${event['attendees'] ?? '120'} Attending',
                   style: GoogleFonts.poppins(
                     color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 12,
+                    fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
                   ),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _getResponsiveSize(screenWidth, 18, 16, 14), 
+                    vertical: _getResponsiveSize(screenWidth, 10, 8, 6)
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
@@ -656,7 +527,7 @@ class _HomePageState extends State<HomePage> {
                     'Join',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -671,121 +542,140 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildUpcomingSection() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isWeb = screenWidth > 800;
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Past',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF2D3436),
-              ),
-            ),
-            Text(
-              'View more',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: const Color(0xFF6C5CE7),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (isWeb)
+    return SizedBox(
+      width: screenWidth * 0.8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
-            children: _filteredUpcomingEvents.map((event) {
-              return Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  child: _buildUpcomingEventCard(event),
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Upcoming',
+                style: GoogleFonts.poppins(
+                  fontSize: _getResponsiveFontSize(screenWidth, 24, 20, 18),
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2D3436),
                 ),
-              );
-            }).toList(),
-          )
-        else
-          Column(
-            children: _filteredUpcomingEvents.map((event) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: _buildUpcomingEventCard(event),
-              );
-            }).toList(),
+              ),
+              Text(
+                'View more',
+                style: GoogleFonts.poppins(
+                  fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+                  color: const Color(0xFF6C5CE7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-      ],
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 120,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _filteredUpcomingEvents.length,
+              itemBuilder: (context, index) {
+                final event = _filteredUpcomingEvents[index];
+                return _buildUpcomingEventCard(event);
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildUpcomingEventCard(Map<String, dynamic> event) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+    final screenWidth = MediaQuery.of(context).size.width;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EventDetailPage(event: event),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF8B5CF6).withValues(alpha: 0.1), Color(0xFFEC4899).withValues(alpha: 0.1)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+        );
+      },
+      child: Container(
+        width: screenWidth * 0.7,
+        margin: const EdgeInsets.only(right: 16),
+        padding: EdgeInsets.all(_getResponsiveSize(screenWidth, 20, 16, 14)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF8B5CF6).withValues(alpha: 0.1), Color(0xFFEC4899).withValues(alpha: 0.1)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
               ),
-              borderRadius: BorderRadius.circular(12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    (event['date'] ?? '25 AUG').split(' ')[0],
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF8B5CF6),
+                    ),
+                  ),
+                  Text(
+                    (event['date'] ?? '25 AUG').split(' ')[1],
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: const Color(0xFF8B5CF6),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  event['date'].split(' ')[0],
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF8B5CF6),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event['title'] ?? 'Event Title',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF2D3436),
+                    ),
                   ),
-                ),
-                Text(
-                  event['date'].split(' ')[1],
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF8B5CF6),
+                  const SizedBox(height: 4),
+                  Text(
+                    event['time'] ?? '2:00 PM - 6:00 PM',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: const Color(0xFF636E72),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
+                const Icon(Icons.people, color: Color(0xFF636E72), size: 16),
+                const SizedBox(width: 4),
                 Text(
-                  event['title'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2D3436),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  event['time'],
+                  '${event['attendees'] ?? '95'}',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: const Color(0xFF636E72),
@@ -793,21 +683,8 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-          ),
-          Row(
-            children: [
-              const Icon(Icons.people, color: Color(0xFF636E72), size: 16),
-              const SizedBox(width: 4),
-              Text(
-                '${event['attendees']}',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: const Color(0xFF636E72),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -970,143 +847,180 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildPastEventsSection() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isWeb = screenWidth > 800;
     
     // Filter past events based on selected category
     final filteredPastEvents = _selectedCategory == 0 
         ? _pastEvents 
         : _pastEvents.where((event) => event['category'] == _categories[_selectedCategory]).toList();
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Past Events',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF2D3436),
-              ),
-            ),
-            Text(
-              'View more',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: const Color(0xFF8B5CF6),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 100,
-          child: PageView.builder(
-            controller: PageController(viewportFraction: isWeb ? 0.5 : 0.9),
-            itemCount: filteredPastEvents.length,
-            itemBuilder: (context, index) {
-              final event = filteredPastEvents[index];
-              return Container(
-                margin: const EdgeInsets.only(right: 16),
-                child: _buildPastEventCard(event),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPastEventCard(Map<String, dynamic> event) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
+    return SizedBox(
+      width: screenWidth * 0.8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF8B5CF6).withValues(alpha: 0.1), Color(0xFFEC4899).withValues(alpha: 0.1)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  event['date'].split(' ')[0],
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF8B5CF6),
-                  ),
-                ),
-                Text(
-                  event['date'].split(' ')[1],
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: const Color(0xFF8B5CF6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  event['title'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2D3436),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  event['time'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFF636E72),
-                  ),
-                ),
-              ],
-            ),
-          ),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.people, color: Color(0xFF636E72), size: 16),
-              const SizedBox(width: 4),
               Text(
-                '${event['attendees']}',
+                'Past Events',
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: const Color(0xFF636E72),
+                  fontSize: _getResponsiveFontSize(screenWidth, 24, 20, 18),
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2D3436),
+                ),
+              ),
+              Text(
+                'View more',
+                style: GoogleFonts.poppins(
+                  fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+                  color: const Color(0xFF8B5CF6),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 180,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: filteredPastEvents.length,
+              itemBuilder: (context, index) {
+                final event = filteredPastEvents[index];
+                return Container(
+                  width: screenWidth * 0.7,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: _buildPastEventCard(event),
+                );
+              },
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPastEventCard(Map<String, dynamic> event) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EventDetailPage(event: event),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+            // Background Image
+            Container(
+              height: 180,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(event['image'] ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            // Gradient Overlay
+            Container(
+              height: 180,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.7),
+                  ],
+                ),
+              ),
+            ),
+            // Content
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: EdgeInsets.all(_getResponsiveSize(screenWidth, 16, 14, 12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: _getResponsiveSize(screenWidth, 10, 8, 6),
+                        vertical: _getResponsiveSize(screenWidth, 6, 5, 4),
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        event['date'] ?? '20 AUG',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: _getResponsiveFontSize(screenWidth, 12, 10, 8),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      event['title'] ?? 'Event Title',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      event['time'] ?? '2:00 PM - 6:00 PM',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.people,
+                          color: Colors.white.withValues(alpha: 0.8),
+                          size: _getResponsiveSize(screenWidth, 16, 14, 12),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${event['attendees'] ?? '85'} attended',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: _getResponsiveFontSize(screenWidth, 12, 10, 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            ],
+          ),
+        ),
       ),
     );
   }
