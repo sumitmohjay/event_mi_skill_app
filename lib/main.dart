@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'src/features/presentation/auth/login_screen.dart';
+import 'src/features/presentation/auth/otp_verification_screen.dart';
 import 'src/features/presentation/home_page.dart';
 import 'src/features/presentation/event_organizer_profile_page.dart';
 import 'src/features/presentation/user_management_page.dart';
@@ -61,7 +64,18 @@ class MyApp extends StatelessWidget {
                 ),
               ),
             ),
-            home: const MainPage(),
+            initialRoute: '/',
+            routes: {
+              '/': (context) => const LoginScreen(),
+              '/verify-otp': (context) {
+                final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+                return OtpVerificationScreen(
+                  phoneNumber: args['phoneNumber'],
+                  role: args['role'],
+                );
+              },
+              '/home': (context) => const MainPage(),
+            },
           ),
         );
       },
