@@ -77,7 +77,7 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
 
   Widget _buildSliverAppBar(BuildContext context) {
     return SliverAppBar(
-      expandedHeight: 250.0,
+      expandedHeight: 220.0,
       floating: false,
       pinned: true,
       backgroundColor: Colors.transparent,
@@ -119,9 +119,9 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF6C63FF),
-                const Color(0xFF4CAF50),
-              ],
+                        Theme.of(context).primaryColor,
+                        Theme.of(context).primaryColor.withValues(alpha: 0.8),
+                      ],
             ),
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(30),
@@ -180,23 +180,7 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Event Organizer',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                  ),                  
                 ],
               ),
             ),

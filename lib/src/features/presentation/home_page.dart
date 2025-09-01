@@ -110,7 +110,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _buildResponsiveContent(),
     );
   }
@@ -136,8 +136,8 @@ class _HomePageState extends State<HomePage> {
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 _buildTodaySection(),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-                _buildCreateEventSection(),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                // _buildCreateEventSection(),
+                // SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 _buildUpcomingSection(),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 _buildPastEventsSection(),
@@ -156,13 +156,13 @@ class _HomePageState extends State<HomePage> {
     return Container(
       width: double.infinity,
       height: screenHeight * 0.18, // Increased height for more spacing
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF8B5CF6), // Purple matching first image
-            Color(0xFFEC4899), // Pink accent from first image
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
           ],
         ),
         borderRadius: BorderRadius.only(
@@ -208,86 +208,86 @@ class _HomePageState extends State<HomePage> {
     return mobileSize;
   }
 
-  Widget _buildCreateEventSection() {
-    final screenWidth = MediaQuery.of(context).size.width;
+  // Widget _buildCreateEventSection() {
+  //   final screenWidth = MediaQuery.of(context).size.width;
     
-    return SizedBox(
-      width: screenWidth * 0.8,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Create An Event',
-            style: GoogleFonts.poppins(
-              fontSize: _getResponsiveFontSize(screenWidth, 24, 20, 18),
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF2D3436),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(_getResponsiveSize(screenWidth, 24, 20, 16)),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)], 
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Create An Event',
-                        style: GoogleFonts.poppins(
-                          fontSize: _getResponsiveFontSize(screenWidth, 20, 18, 16),
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'New York, US',
-                        style: GoogleFonts.poppins(
-                          fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: _getResponsiveSize(screenWidth, 60, 50, 45),
-                  height: _getResponsiveSize(screenWidth, 60, 50, 45),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.add, 
-                    color: Colors.white, 
-                    size: _getResponsiveSize(screenWidth, 28, 24, 20)
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  //   return SizedBox(
+  //     width: screenWidth * 0.8,
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Text(
+  //           'Create An Event',
+  //           style: GoogleFonts.poppins(
+  //             fontSize: _getResponsiveFontSize(screenWidth, 24, 20, 18),
+  //             fontWeight: FontWeight.w600,
+  //             color: const Color(0xFF2D3436),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //         Container(
+  //           width: double.infinity,
+  //           padding: EdgeInsets.all(_getResponsiveSize(screenWidth, 24, 20, 16)),
+  //           decoration: BoxDecoration(
+  //             gradient: const LinearGradient(
+  //               colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)], 
+  //               begin: Alignment.topLeft,
+  //               end: Alignment.bottomRight,
+  //             ),
+  //             borderRadius: BorderRadius.circular(20),
+  //             boxShadow: [
+  //               BoxShadow(
+  //                 color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+  //                 blurRadius: 15,
+  //                 offset: const Offset(0, 8),
+  //               ),
+  //             ],
+  //           ),
+  //           child: Row(
+  //             children: [
+  //               Expanded(
+  //                 child: Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Text(
+  //                       'Create An Event',
+  //                       style: GoogleFonts.poppins(
+  //                         fontSize: _getResponsiveFontSize(screenWidth, 20, 18, 16),
+  //                         fontWeight: FontWeight.w600,
+  //                         color: Colors.white,
+  //                       ),
+  //                     ),
+  //                     const SizedBox(height: 4),
+  //                     Text(
+  //                       'New York, US',
+  //                       style: GoogleFonts.poppins(
+  //                         fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+  //                         color: Colors.white.withValues(alpha: 0.9),
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ),
+  //               Container(
+  //                 width: _getResponsiveSize(screenWidth, 60, 50, 45),
+  //                 height: _getResponsiveSize(screenWidth, 60, 50, 45),
+  //                 decoration: BoxDecoration(
+  //                   color: Colors.white.withValues(alpha: 0.2),
+  //                   borderRadius: BorderRadius.circular(12),
+  //                 ),
+  //                 child: Icon(
+  //                   Icons.add, 
+  //                   color: Colors.white, 
+  //                   size: _getResponsiveSize(screenWidth, 28, 24, 20)
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildCategoryFilter() {
     final screenWidth = MediaQuery.of(context).size.width;

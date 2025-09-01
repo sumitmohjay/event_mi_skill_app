@@ -53,7 +53,7 @@ class _EventPageState extends State<EventPage> {
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              expandedHeight: 180.0,
+              expandedHeight: 220.0,
               floating: false,
               pinned: true,
               backgroundColor: Colors.transparent,
@@ -80,7 +80,7 @@ class _EventPageState extends State<EventPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 30),
                           Text(
                             'Discover Events',
                             style: GoogleFonts.poppins(
