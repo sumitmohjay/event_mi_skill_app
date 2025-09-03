@@ -15,14 +15,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
   final TextEditingController _phoneController = TextEditingController();
   
   // Assignment tracking
-  Map<String, List<String>> _tempAssignments = {
+  final Map<String, List<String>> _tempAssignments = {
     'Events': [],
     'Courses': [],
     'Groups': [],
   };
   
   // Mock user data focused on user management
-  List<Map<String, dynamic>> _users = [
+  final List<Map<String, dynamic>> _users = [
     {
       'id': '1',
       'name': 'John Doe',
@@ -846,7 +846,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   Widget _buildAssignmentSection(String type, Map<String, dynamic> user) {
     final availableItems = _getAvailableItems(type);
-    final currentAssignments = List<String>.from(user['assigned${type}'] ?? []);
+    final currentAssignments = List<String>.from(user['assigned$type'] ?? []);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -903,7 +903,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                         } else {
                           currentAssignments.remove(item);
                         }
-                        user['assigned${type}'] = currentAssignments;
+                        user['assigned$type'] = currentAssignments;
                         _tempAssignments[type] = List<String>.from(currentAssignments);
                       });
                     },

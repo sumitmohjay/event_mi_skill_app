@@ -498,7 +498,7 @@ class _NotificationManagementPageState extends State<NotificationManagementPage>
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<NotificationType>(
-                  value: selectedType,
+                  initialValue: selectedType,
                   decoration: InputDecoration(
                     labelText: 'Type',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -521,7 +521,7 @@ class _NotificationManagementPageState extends State<NotificationManagementPage>
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<NotificationPriority>(
-                  value: selectedPriority,
+                  initialValue: selectedPriority,
                   decoration: InputDecoration(
                     labelText: 'Priority',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -561,17 +561,17 @@ class _NotificationManagementPageState extends State<NotificationManagementPage>
                 }
 
                 final newNotification = NotificationModel(
-                  id: isEditing ? notification!.id : DateTime.now().millisecondsSinceEpoch.toString(),
+                  id: isEditing ? notification.id : DateTime.now().millisecondsSinceEpoch.toString(),
                   title: titleController.text.trim(),
                   message: messageController.text.trim(),
-                  createdAt: isEditing ? notification!.createdAt : DateTime.now(),
+                  createdAt: isEditing ? notification.createdAt : DateTime.now(),
                   type: selectedType,
                   priority: selectedPriority,
-                  isRead: isEditing ? notification!.isRead : false,
+                  isRead: isEditing ? notification.isRead : false,
                 );
 
                 if (isEditing) {
-                  _repository.updateNotification(notification!.id, newNotification);
+                  _repository.updateNotification(notification.id, newNotification);
                   _showSnackBar('Notification updated successfully');
                 } else {
                   _repository.addNotification(newNotification);

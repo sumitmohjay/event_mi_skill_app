@@ -15,7 +15,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   final ScrollController _scrollController = ScrollController();
 
   // Mock chat messages
-  List<Map<String, dynamic>> _messages = [
+  final List<Map<String, dynamic>> _messages = [
     {
       'id': '1',
       'sender': 'John Doe',
@@ -479,7 +479,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
             Switch(
               value: true,
               onChanged: (value) {},
-              activeColor: Theme.of(context).primaryColor,
+              activeThumbColor: Theme.of(context).primaryColor,
             )
           else
             Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),

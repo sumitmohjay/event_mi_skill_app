@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -14,8 +17,21 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   String? _selectedRole;
   bool _isLoading = false;
+  late AuthService _authService;
 
   final List<String> _roles = ['Student', 'Event Organizer'];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAuthService();
+  }
+
+  Future<void> _initializeAuthService() async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiClient = ApiClient(prefs);
+    _authService = AuthService(apiClient, prefs);
+  }
 
   @override
   void dispose() {
@@ -23,20 +39,46 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     if (_formKey.currentState!.validate() && _selectedRole != null) {
       setState(() => _isLoading = true);
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 1), () {
-        Navigator.pushReplacementNamed(
-          context,
-          '/verify-otp',
-          arguments: {
-            'phoneNumber': _phoneController.text,
-            'role': _selectedRole,
-          },
+      
+      try {
+        final response = await _authService.sendOtp(
+          _phoneController.text.trim(),
+          _selectedRole!,
         );
-      });
+
+        if (response.success) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // Navigate to OTP verification
+          Navigator.pushReplacementNamed(
+            context,
+            '/verify-otp',
+            arguments: {
+              'phoneNumber': _phoneController.text.trim(),
+              'role': _selectedRole,
+            },
+          );
+        }
+      } catch (e) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -126,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 8.h),
                 DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12.r),

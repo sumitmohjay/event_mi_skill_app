@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/services/auth_service.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String phoneNumber;
   final String role;
 
   const OtpVerificationScreen({
-    Key? key,
+    super.key,
     required this.phoneNumber,
     required this.role,
-  }) : super(key: key);
+  });
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -24,11 +27,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   bool _isLoading = false;
   bool _resendEnabled = false;
   int _resendTimer = 30;
+  late AuthService _authService;
 
   @override
   void initState() {
     super.initState();
+    _initializeAuthService();
     _startResendTimer();
+  }
+
+  Future<void> _initializeAuthService() async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiClient = ApiClient(prefs);
+    _authService = AuthService(apiClient, prefs);
   }
 
   @override
@@ -59,15 +70,37 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
   }
 
-  void _verifyOtp() {
+  void _verifyOtp() async {
     String otp = _otpControllers.map((controller) => controller.text).join();
     if (otp.length == 6) {
       setState(() => _isLoading = true);
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 2), () {
-        // Navigate to home on success
-        Navigator.pushReplacementNamed(context, '/home');
-      });
+      
+      try {
+        final response = await _authService.verifyOtp(widget.phoneNumber, otp);
+        
+        if (response.success) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Navigate to home on success
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      } catch (e) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

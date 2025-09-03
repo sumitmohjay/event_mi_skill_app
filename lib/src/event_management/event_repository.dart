@@ -4,6 +4,7 @@ import 'event.dart';
 abstract class EventRepository {
   Future<Either<String, List<Event>>> getAllEvents();
   Future<Either<String, Event>> getEventById(String id);
+  Future<Either<String, Event>> getEventBySlug(String slug);
   Future<Either<String, List<Event>>> getEventsByCategory(EventCategory category);
   Future<Either<String, List<Event>>> searchEvents(String query);
   Future<Either<String, Event>> createEvent(Event event);

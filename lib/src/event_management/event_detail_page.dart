@@ -7,13 +7,94 @@ import 'event.dart';
 import 'provider/event_provider.dart';
 import 'create_edit_event_page.dart';
 
-class EventDetailPage extends StatelessWidget {
-  final Event event;
+class EventDetailPage extends StatefulWidget {
+  final Event? event;
+  final String? slug;
 
-  const EventDetailPage({super.key, required this.event});
+  const EventDetailPage({super.key, this.event, this.slug});
+
+  @override
+  State<EventDetailPage> createState() => _EventDetailPageState();
+}
+
+class _EventDetailPageState extends State<EventDetailPage> {
+  Event? _event;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _event = widget.event;
+    
+    // If slug is provided, load event by slug
+    if (widget.slug != null && widget.event == null) {
+      _loadEventBySlug();
+    }
+  }
+
+  Future<void> _loadEventBySlug() async {
+    if (widget.slug == null) return;
+    
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final eventProvider = context.read<EventProvider>();
+    final result = await eventProvider.loadEventBySlug(widget.slug!);
+    
+    setState(() {
+      _isLoading = false;
+      if (result != null) {
+        _event = result;
+      } else {
+        _errorMessage = eventProvider.errorMessage ?? 'Failed to load event';
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFF),
+        appBar: AppBar(title: const Text('Loading...')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFF),
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(_errorMessage!, style: GoogleFonts.poppins(fontSize: 16)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadEventBySlug,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_event == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFF),
+        appBar: AppBar(title: const Text('Event Not Found')),
+        body: const Center(child: Text('Event not found')),
+      );
+    }
+
+    final event = _event!;
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFF),
       body: CustomScrollView(
@@ -25,25 +106,25 @@ class EventDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildEventHeader(),
+                  _buildEventHeader(event),
                   const SizedBox(height: 20),
-                  _buildEventInfo(),
+                  _buildEventInfo(event),
                   const SizedBox(height: 20),
-                  _buildDescription(),
+                  _buildDescription(event),
                   const SizedBox(height: 20),
-                  _buildVenueInfo(),
+                  _buildLocationInfo(event),
                   const SizedBox(height: 20),
-                  if (event.resources.isNotEmpty) ...[
-                    _buildResourcesSection(),
+                  if (event.images.isNotEmpty) ...[
+                    _buildImagesSection(event),
                     const SizedBox(height: 20),
                   ],
-                  if (event.tags.isNotEmpty) ...[
-                    _buildTagsSection(),
+                  if (event.videos.isNotEmpty) ...[
+                    _buildVideosSection(event),
                     const SizedBox(height: 20),
                   ],
-                  _buildContactInfo(),
+                  // _buildContactInfo(event),
                   const SizedBox(height: 20),
-                  _buildActionButtons(context),
+                  _buildActionButtons(context, event),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -54,11 +135,12 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context) {
+  SliverAppBar _buildSliverAppBar(BuildContext context) {
+    final event = _event!;
     return SliverAppBar(
-      expandedHeight: 200,
+      expandedHeight: 250,
       pinned: true,
-      backgroundColor: Theme.of(context).primaryColor,
+      backgroundColor: Colors.transparent,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -66,75 +148,50 @@ class EventDetailPage extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Theme.of(context).primaryColor,
-                Theme.of(context).primaryColor.withOpacity(0.8),
+                event.category == 'Technology'
+                    ? Colors.blue.shade400
+                    : event.category == 'Business'
+                        ? Colors.green.shade400
+                        : event.category == 'Health'
+                            ? Colors.red.shade400
+                            : Colors.purple.shade400,
+                event.category == 'Technology'
+                    ? Colors.blue.shade600
+                    : event.category == 'Business'
+                        ? Colors.green.shade600
+                        : event.category == 'Health'
+                            ? Colors.red.shade600
+                            : Colors.purple.shade600,
               ],
             ),
           ),
-          child: event.imageUrl != null
-              ? Image.network(
-                  event.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildDefaultHeader();
-                  },
-                )
-              : _buildDefaultHeader(),
-        ),
-      ),
-      actions: [
-        PopupMenuButton<String>(
-          onSelected: (value) => _handleMenuAction(context, value),
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  const Icon(Icons.edit, size: 18),
-                  const SizedBox(width: 8),
-                  Text('Edit Event', style: GoogleFonts.poppins()),
-                ],
+          child: Stack(
+            children: [
+              Positioned(
+                top: 100,
+                right: -50,
+                child: Icon(
+                  Icons.event,
+                  size: 200,
+                  color: Colors.white.withOpacity(0.1),
+                ),
               ),
-            ),
-            PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  const Icon(Icons.delete, size: 18, color: Colors.red),
-                  const SizedBox(width: 8),
-                  Text('Delete Event', style: GoogleFonts.poppins(color: Colors.red)),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildDefaultHeader() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.blue.shade400,
-            Colors.purple.shade400,
-          ],
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.event,
-          size: 80,
-          color: Colors.white.withOpacity(0.8),
+        title: Text(
+          event.title,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildEventHeader() {
+
+  Widget _buildEventHeader(Event event) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -171,7 +228,7 @@ class EventDetailPage extends StatelessWidget {
               Icon(Icons.category, size: 16, color: Colors.grey[600]),
               const SizedBox(width: 8),
               Text(
-                _getCategoryDisplayName(event.category),
+                _getCategoryDisplayName(event.category ?? EventCategory.technical),
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -213,10 +270,11 @@ class EventDetailPage extends StatelessWidget {
   }
 
   Widget _buildEventModeChip() {
+    final event = _event!;
     Color chipColor;
     IconData chipIcon;
     
-    switch (event.mode) {
+    switch (event.mode ?? EventMode.online) {
       case EventMode.online:
         chipColor = Colors.blue;
         chipIcon = Icons.videocam;
@@ -244,7 +302,7 @@ class EventDetailPage extends StatelessWidget {
           Icon(chipIcon, size: 14, color: chipColor),
           const SizedBox(width: 4),
           Text(
-            _getEventModeDisplayName(event.mode),
+            _getEventModeDisplayName(event.mode ?? EventMode.online),
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -256,7 +314,7 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildEventInfo() {
+  Widget _buildEventInfo(Event event) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -272,27 +330,64 @@ class EventDetailPage extends StatelessWidget {
       ),
       child: Column(
         children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 20, color: Colors.grey[600]),
+              const SizedBox(width: 8),
+              Text(
+                'Event Information',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          if (event.startDate != null || event.startTime != null) ...[
+            _buildInfoRow(
+              Icons.calendar_today,
+              'Start',
+              _formatDateTimeDisplay(event.startDate, event.startTime),
+            ),
+            const Divider(height: 30),
+          ],
+          if (event.endDate != null || event.endTime != null) ...[
+            _buildInfoRow(
+              Icons.event,
+              'End',
+              _formatDateTimeDisplay(event.endDate, event.endTime),
+            ),
+            const Divider(height: 30),
+          ],
           _buildInfoRow(
-            Icons.access_time,
-            'Date & Time',
-            DateFormat('EEEE, MMM dd, yyyy • HH:mm').format(event.dateTime),
+            Icons.category,
+            'Category',
+            _getCategoryDisplayName(event.category ?? EventCategory.other),
+          ),
+          const Divider(height: 30),
+          _buildInfoRow(
+            Icons.computer,
+            'Mode',
+            _getEventModeDisplayName(event.mode ?? EventMode.offline),
           ),
           const Divider(height: 30),
           _buildInfoRow(
             Icons.people,
             'Capacity',
-            '${event.currentAttendees}/${event.maxAttendees} attendees',
+            '${event.maxAttendees}',
           ),
           const Divider(height: 30),
           _buildInfoRow(
             Icons.person,
             'Organizer',
-            event.organizerName,
+            event.organizerName ?? 'Unknown',
           ),
         ],
       ),
     );
   }
+
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
@@ -331,7 +426,7 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDescription() {
+  Widget _buildDescription(Event event) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -369,7 +464,7 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildVenueInfo() {
+  Widget _buildLocationInfo(Event event) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -405,7 +500,7 @@ class EventDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            event.venue,
+            event.venue ?? 'TBD',
             style: GoogleFonts.poppins(
               fontSize: 14,
               color: Colors.grey[700],
@@ -447,7 +542,9 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildResourcesSection() {
+  Widget _buildImagesSection(Event event) {
+    if (event.images.isEmpty) return const SizedBox.shrink();
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -466,10 +563,10 @@ class EventDetailPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.attachment, size: 20, color: Colors.grey[600]),
+              Icon(Icons.image, size: 20, color: Colors.grey[600]),
               const SizedBox(width: 8),
               Text(
-                'Resources',
+                'Images (${event.images.length})',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -478,51 +575,84 @@ class EventDetailPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 15),
-          ...List.generate(event.resources.length, (index) {
-            final resource = event.resources[index];
-            final fileName = resource.split('/').last;
-            
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                onTap: () => _launchUrl(resource),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _getFileIcon(fileName),
-                        size: 20,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          fileName,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.grey[700],
+          if (event.images.isNotEmpty) ...[
+            SizedBox(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: event.images.length,
+                itemBuilder: (context, index) {
+                  return Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    width: 120,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey[200],
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: event.images[index].isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              event.images[index],
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.grey[500],
+                                    size: 40,
+                                  ),
+                                );
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  alignment: Alignment.center,
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.image_not_supported,
+                              color: Colors.grey[500],
+                              size: 40,
+                            ),
                           ),
-                        ),
-                      ),
-                      Icon(Icons.open_in_new, size: 16, color: Colors.grey[500]),
-                    ],
-                  ),
+                  );
+                },
+              ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(20),
+              alignment: Alignment.center,
+              child: Text(
+                'No images available',
+                style: GoogleFonts.poppins(
+                  color: Colors.grey[500],
+                  fontSize: 14,
                 ),
               ),
-            );
-          }),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildTagsSection() {
+  Widget _buildVideosSection(Event event) {
+    if (event.videos.isEmpty) return const SizedBox.shrink();
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -541,10 +671,10 @@ class EventDetailPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.tag, size: 20, color: Colors.grey[600]),
+              Icon(Icons.videocam, size: 20, color: Colors.grey[600]),
               const SizedBox(width: 8),
               Text(
-                'Tags',
+                'Videos (${event.videos.length})',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -553,108 +683,60 @@ class EventDetailPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 15),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: event.tags.map((tag) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Text(
-                  tag,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.blue[700],
-                    fontWeight: FontWeight.w500,
+          if (event.videos.isNotEmpty) ...[
+            Column(
+              children: event.videos.map((videoUrl) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () => _launchUrl(videoUrl),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.play_circle_fill,
+                            color: Colors.blue[600],
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              videoUrl.isNotEmpty ? videoUrl.split('/').last : 'Video ${event.videos.indexOf(videoUrl) + 1}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.open_in_new,
+                            color: Colors.blue[500],
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactInfo() {
-    if (event.contactEmail == null && event.contactPhone == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.contact_support, size: 20, color: Colors.grey[600]),
-              const SizedBox(width: 8),
-              Text(
-                'Contact Information',
+                );
+              }).toList(),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(20),
+              alignment: Alignment.center,
+              child: Text(
+                'No videos available',
                 style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[500],
+                  fontSize: 14,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          if (event.contactEmail != null) ...[
-            InkWell(
-              onTap: () => _launchUrl('mailto:${event.contactEmail}'),
-              child: Row(
-                children: [
-                  Icon(Icons.email, size: 18, color: Colors.grey[600]),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      event.contactEmail!,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.blue[600],
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (event.contactPhone != null) const SizedBox(height: 12),
-          ],
-          if (event.contactPhone != null) ...[
-            InkWell(
-              onTap: () => _launchUrl('tel:${event.contactPhone}'),
-              child: Row(
-                children: [
-                  Icon(Icons.phone, size: 18, color: Colors.grey[600]),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      event.contactPhone!,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.blue[600],
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           ],
@@ -663,7 +745,92 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+
+
+  // Widget _buildContactInfo(Event event) {
+  //   if (event.contactEmail == null && event.contactPhone == null) {
+  //     return const SizedBox.shrink();
+  //   }
+
+  //   return Container(
+  //     padding: const EdgeInsets.all(20),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(15),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.05),
+  //           blurRadius: 10,
+  //           offset: const Offset(0, 5),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           children: [
+  //             Icon(Icons.contact_support, size: 20, color: Colors.grey[600]),
+  //             const SizedBox(width: 8),
+  //             Text(
+  //               'Contact Information',
+  //               style: GoogleFonts.poppins(
+  //                 fontSize: 18,
+  //                 fontWeight: FontWeight.w600,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         const SizedBox(height: 15),
+  //         if (event.contactEmail != null) ...[
+  //           InkWell(
+  //             onTap: () => _launchUrl('mailto:${event.contactEmail}'),
+  //             child: Row(
+  //               children: [
+  //                 Icon(Icons.email, size: 18, color: Colors.grey[600]),
+  //                 const SizedBox(width: 12),
+  //                 Expanded(
+  //                   child: Text(
+  //                     event.contactEmail!,
+  //                     style: GoogleFonts.poppins(
+  //                       fontSize: 14,
+  //                       color: Colors.blue[600],
+  //                       decoration: TextDecoration.underline,
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           if (event.contactPhone != null) const SizedBox(height: 12),
+  //         ],
+  //         if (event.contactPhone != null) ...[
+  //           InkWell(
+  //             onTap: () => _launchUrl('tel:${event.contactPhone}'),
+  //             child: Row(
+  //               children: [
+  //                 Icon(Icons.phone, size: 18, color: Colors.grey[600]),
+  //                 const SizedBox(width: 12),
+  //                 Expanded(
+  //                   child: Text(
+  //                     event.contactPhone!,
+  //                     style: GoogleFonts.poppins(
+  //                       fontSize: 14,
+  //                       color: Colors.blue[600],
+  //                       decoration: TextDecoration.underline,
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ],
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  Widget _buildActionButtons(BuildContext context, Event event) {
     return Row(
       children: [
         Expanded(
@@ -709,22 +876,12 @@ class EventDetailPage extends StatelessWidget {
     );
   }
 
-  void _handleMenuAction(BuildContext context, String action) {
-    switch (action) {
-      case 'edit':
-        _editEvent(context);
-        break;
-      case 'delete':
-        _deleteEvent(context);
-        break;
-    }
-  }
 
   void _editEvent(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CreateEditEventPage(event: event),
+        builder: (context) => CreateEditEventPage(event: _event!),
       ),
     );
   }
@@ -738,7 +895,7 @@ class EventDetailPage extends StatelessWidget {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         content: Text(
-          'Are you sure you want to delete "${event.title}"? This action cannot be undone.',
+          'Are you sure you want to delete "${_event!.title}"? This action cannot be undone.',
           style: GoogleFonts.poppins(),
         ),
         actions: [
@@ -752,7 +909,7 @@ class EventDetailPage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              final success = await context.read<EventProvider>().deleteEvent(event.id);
+              final success = await context.read<EventProvider>().deleteEvent(_event!.id);
               if (success && context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -787,30 +944,6 @@ class EventDetailPage extends StatelessWidget {
     }
   }
 
-  IconData _getFileIcon(String fileName) {
-    final extension = fileName.split('.').last.toLowerCase();
-    switch (extension) {
-      case 'pdf':
-        return Icons.picture_as_pdf;
-      case 'doc':
-      case 'docx':
-        return Icons.description;
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return Icons.image;
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-        return Icons.video_file;
-      case 'mp3':
-      case 'wav':
-        return Icons.audio_file;
-      default:
-        return Icons.attach_file;
-    }
-  }
 
   String _getCategoryDisplayName(EventCategory category) {
     switch (category) {
@@ -846,5 +979,45 @@ class EventDetailPage extends StatelessWidget {
       case EventMode.hybrid:
         return 'Hybrid';
     }
+  }
+
+  String _formatDateTimeDisplay(DateTime? date, String? time) {
+    String result = '';
+    
+    // Add date part if available
+    if (date != null) {
+      result = DateFormat('MMM dd, yyyy').format(date);
+    }
+    
+    // Add time part if available
+    if (time != null && time.isNotEmpty) {
+      final formattedTime = _formatTime12Hour(time);
+      if (result.isNotEmpty) {
+        result += ' • $formattedTime';
+      } else {
+        result = formattedTime;
+      }
+    }
+    
+    return result.isNotEmpty ? result : 'TBD';
+  }
+
+  String _formatTime12Hour(String time24) {
+    try {
+      final timeParts = time24.split(':');
+      if (timeParts.length >= 2) {
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        
+        final period = hour >= 12 ? 'PM' : 'AM';
+        final hour12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+        
+        return '$hour12:${minute.toString().padLeft(2, '0')} $period';
+      }
+    } catch (e) {
+      // If parsing fails, return original time
+      return time24;
+    }
+    return time24;
   }
 }

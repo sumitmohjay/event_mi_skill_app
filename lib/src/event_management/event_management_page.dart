@@ -6,6 +6,7 @@ import 'event.dart';
 import 'provider/event_provider.dart';
 import 'create_edit_event_page.dart';
 import 'event_detail_page.dart';
+import '../core/providers/user_profile_provider.dart';
 
 class EventManagementPage extends StatefulWidget {
   const EventManagementPage({super.key});
@@ -22,6 +23,7 @@ class _EventManagementPageState extends State<EventManagementPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<EventProvider>().loadAllEvents();
+      context.read<UserProfileProvider>().loadUserProfile();
     });
   }
 
@@ -124,7 +126,9 @@ class _EventManagementPageState extends State<EventManagementPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildCategoryFilter(eventProvider),
+                  _buildUserProfileSection(),
+                  const SizedBox(height: 20),
+                  _getCategoryIcon(EventCategory.other),
                   const SizedBox(height: 20),
                   _buildEventStats(eventProvider),
                   const SizedBox(height: 20),
@@ -147,6 +151,217 @@ class _EventManagementPageState extends State<EventManagementPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildUserProfileSection() {
+    return Consumer<UserProfileProvider>(
+      builder: (context, profileProvider, child) {
+        if (profileProvider.isLoading) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (profileProvider.errorMessage != null) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.error_outline, size: 40, color: Colors.red[300]),
+                const SizedBox(height: 8),
+                Text(
+                  'Failed to load profile',
+                  style: GoogleFonts.poppins(
+                    color: Colors.red[600],
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () => profileProvider.refreshProfile(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (profileProvider.user == null) {
+          return const SizedBox.shrink();
+        }
+
+        final user = profileProvider.user!;
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    backgroundImage: user.avatar != null ? NetworkImage(user.avatar!) : null,
+                    child: user.avatar == null
+                        ? Icon(
+                            Icons.person,
+                            size: 30,
+                            color: Theme.of(context).primaryColor,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            user.role.toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => profileProvider.refreshProfile(),
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Refresh Profile',
+                  ),
+                ],
+              ),
+              if (user.bio.isNotEmpty) ...[
+                const SizedBox(height: 15),
+                Text(
+                  user.bio,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildProfileInfoItem(
+                      Icons.email,
+                      'Email',
+                      user.email,
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: _buildProfileInfoItem(
+                      Icons.phone,
+                      'Phone',
+                      user.phoneNumber,
+                    ),
+                  ),
+                ],
+              ),
+              if (user.college.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _buildProfileInfoItem(
+                  Icons.school,
+                  'Organization',
+                  user.college,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileInfoItem(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[500]),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -194,70 +409,24 @@ class _EventManagementPageState extends State<EventManagementPage> {
     );
   }
 
-  Widget _buildCategoryFilter(EventProvider eventProvider) {
-    return SizedBox(
-      height: 45,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: EventCategory.values.length + 1,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return _buildCategoryChip(
-              'All',
-              eventProvider.selectedCategory == null,
-              () => eventProvider.filterByCategory(null),
-              Colors.grey,
-            );
-          }
-          
-          final category = EventCategory.values[index - 1];
-          final isSelected = eventProvider.selectedCategory == category;
-          
-          return _buildCategoryChip(
-            eventProvider.getCategoryDisplayName(category),
-            isSelected,
-            () => eventProvider.filterByCategory(category),
-            eventProvider.getCategoryColor(category),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip(String label, bool isSelected, VoidCallback onTap, Color color) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.poppins(
-            color: isSelected ? Colors.white : color,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
+  Widget _getCategoryIcon(EventCategory category) {
+    return Icon(
+      category == EventCategory.conference
+          ? Icons.people
+              : category == EventCategory.seminar
+                  ? Icons.group
+                  : category == EventCategory.workshop
+                  ? Icons.work
+                  : Icons.event,
+      size: 40,
+      color: Colors.grey[600],
     );
   }
 
   Widget _buildEventStats(EventProvider eventProvider) {
     final totalEvents = eventProvider.events.length;
     final upcomingEvents = eventProvider.events
-        .where((event) => event.dateTime.isAfter(DateTime.now()))
+        .where((event) => event.dateTime?.isAfter(DateTime.now()) ?? false)
         .length;
 
     return Container(
@@ -383,7 +552,7 @@ class _EventManagementPageState extends State<EventManagementPage> {
   }
 
   Widget _buildEventCard(Event event, EventProvider eventProvider) {
-    final isUpcoming = event.dateTime.isAfter(DateTime.now());
+    final isUpcoming = event.dateTime?.isAfter(DateTime.now()) ?? false;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -411,15 +580,15 @@ class _EventManagementPageState extends State<EventManagementPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: eventProvider.getCategoryColor(event.category).withOpacity(0.1),
+                      color: eventProvider.getCategoryColor(event.category ?? EventCategory.other).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      eventProvider.getCategoryDisplayName(event.category),
+                      eventProvider.getCategoryDisplayName(event.category ?? EventCategory.other),
                       style: GoogleFonts.poppins(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: eventProvider.getCategoryColor(event.category),
+                        color: eventProvider.getCategoryColor(event.category ?? EventCategory.other),
                       ),
                     ),
                   ),
@@ -460,7 +629,7 @@ class _EventManagementPageState extends State<EventManagementPage> {
                   Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(
-                    DateFormat('MMM dd, yyyy • HH:mm').format(event.dateTime),
+                    DateFormat('MMM dd, yyyy • HH:mm').format(event.dateTime ?? DateTime.now()),
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: Colors.grey[600],
@@ -479,7 +648,7 @@ class _EventManagementPageState extends State<EventManagementPage> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      event.venue,
+                      event.venue ?? 'TBD',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.grey[600],

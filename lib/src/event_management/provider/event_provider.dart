@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:dartz/dartz.dart';
 import '../event.dart';
 import '../event_repository.dart';
 
+/// A provider class that manages the state and business logic for events in the application.
+/// 
+/// This class handles loading, filtering, and managing events, and notifies listeners
+/// when the state changes. It works with an [EventRepository] to persist and retrieve event data.
+///
+/// Example usage:
+/// ```dart
+/// final eventProvider = EventProvider(
+///   eventRepository: eventRepository,
+/// );
+/// ```
 class EventProvider with ChangeNotifier {
+  /// The repository used to fetch and persist event data.
   final EventRepository _eventRepository;
 
+  /// Creates a new [EventProvider] with the given [eventRepository].
+  ///
+  /// The [eventRepository] parameter must not be null.
   EventProvider({required EventRepository eventRepository})
       : _eventRepository = eventRepository;
 
@@ -18,12 +34,26 @@ class EventProvider with ChangeNotifier {
   String _searchQuery = '';
 
   // Getters
+  
+  /// The complete list of all events.
   List<Event> get events => _events;
+  
+  /// The list of events after applying any active filters or search queries.
   List<Event> get filteredEvents => _filteredEvents;
+  
+  /// The currently selected event, if any.
   Event? get selectedEvent => _selectedEvent;
+  
+  /// Whether the provider is currently loading data.
   bool get isLoading => _isLoading;
+  
+  /// The current error message, if any error occurred during the last operation.
   String? get errorMessage => _errorMessage;
+  
+  /// The currently selected event category filter, if any.
   EventCategory? get selectedCategory => _selectedCategory;
+  
+  /// The current search query string.
   String get searchQuery => _searchQuery;
 
   // Load all events
@@ -55,6 +85,31 @@ class EventProvider with ChangeNotifier {
     );
 
     _setLoading(false);
+  }
+
+  // Get event by ID (returns Either for better error handling)
+  Future<Either<String, Event>> getEventById(String id) async {
+    return await _eventRepository.getEventById(id);
+  }
+
+  // Load event by slug
+  Future<Event?> loadEventBySlug(String slug) async {
+    _setLoading(true);
+    _clearError();
+
+    final result = await _eventRepository.getEventBySlug(slug);
+    Event? event;
+    
+    result.fold(
+      (error) => _setError(error),
+      (loadedEvent) {
+        event = loadedEvent;
+        _selectedEvent = loadedEvent;
+      },
+    );
+
+    _setLoading(false);
+    return event;
   }
 
   // Create new event
@@ -274,13 +329,17 @@ class EventProvider with ChangeNotifier {
       filtered = filtered.where((event) {
         return event.title.toLowerCase().contains(query) ||
                event.description.toLowerCase().contains(query) ||
-               event.venue.toLowerCase().contains(query) ||
+               (event.venue?.toLowerCase().contains(query) ?? false) ||
                event.tags.any((tag) => tag.toLowerCase().contains(query));
       }).toList();
     }
 
     // Sort by date (upcoming first)
-    filtered.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    filtered.sort((a, b) {
+      final aDate = a.dateTime ?? DateTime.now();
+      final bDate = b.dateTime ?? DateTime.now();
+      return aDate.compareTo(bDate);
+    });
 
     _filteredEvents = filtered;
     notifyListeners();

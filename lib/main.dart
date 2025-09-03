@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'src/features/presentation/auth/login_screen.dart';
 import 'src/features/presentation/auth/otp_verification_screen.dart';
 import 'src/features/presentation/home_page.dart';
@@ -14,6 +13,10 @@ import 'src/group_page/group_page.dart';
 import 'src/event_management/provider/event_provider.dart';
 import 'src/event_management/event_local_datasource.dart';
 import 'src/event_management/event_repository_impl.dart';
+import 'src/core/providers/user_profile_provider.dart';
+import 'src/core/services/auth_service.dart';
+import 'src/core/services/event_api_service.dart';
+import 'src/core/api/api_client.dart';
 import 'src/widgets/app_header.dart';
 
 void main() async {
@@ -36,14 +39,44 @@ class MyApp extends StatelessWidget {
       builder: (_, child) {
         return MultiProvider(
           providers: [
-            ChangeNotifierProvider<EventProvider>(
-              create: (_) => EventProvider(
+            // API Client Provider
+            Provider<ApiClient>(
+              create: (_) => ApiClient(sharedPreferences),
+            ),
+            // Auth Service Provider
+            ProxyProvider<ApiClient, AuthService>(
+              update: (_, apiClient, __) => AuthService(apiClient, sharedPreferences),
+            ),
+            // Event API Service Provider
+            ProxyProvider<ApiClient, EventApiService>(
+              update: (_, apiClient, __) => EventApiService(apiClient),
+            ),
+            // Event Provider
+            ChangeNotifierProxyProvider<EventApiService, EventProvider>(
+              create: (context) => EventProvider(
                 eventRepository: EventRepositoryImpl(
                   localDataSource: EventLocalDataSourceImpl(
                     sharedPreferences: sharedPreferences,
                   ),
+                  apiService: Provider.of<EventApiService>(context, listen: false),
                 ),
               ),
+              update: (_, eventApiService, previous) => previous ?? EventProvider(
+                eventRepository: EventRepositoryImpl(
+                  localDataSource: EventLocalDataSourceImpl(
+                    sharedPreferences: sharedPreferences,
+                  ),
+                  apiService: eventApiService,
+                ),
+              ),
+            ),
+            // User Profile Provider
+            ChangeNotifierProxyProvider<AuthService, UserProfileProvider>(
+              create: (context) => UserProfileProvider(
+                Provider.of<AuthService>(context, listen: false),
+              ),
+              update: (_, authService, previous) => 
+                  previous ?? UserProfileProvider(authService),
             ),
           ],
           child: MaterialApp(
