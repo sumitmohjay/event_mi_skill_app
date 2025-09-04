@@ -59,25 +59,47 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   ),
                   child: SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.only(left: 10, right: 20, top: 10, bottom: 10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 10),
-                          Text(
-                            'User Management',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () {
+                                  Navigator.pushNamedAndRemoveUntil(
+                                    context,
+                                    '/home',
+                                    (route) => false,
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'User Management',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 5),
-                          Text(
-                            'View and manage user profiles',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 14,
+                          Padding(
+                            padding: const EdgeInsets.only(left: 48),
+                            child: Text(
+                              'View and manage user profiles',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -127,10 +149,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildUserProfileSection(),
-                  const SizedBox(height: 20),
-                  // _buildUserStats(profileProvider),
-                  // const SizedBox(height: 20),
                   _buildEventsSection(),
                 ],
               ),
@@ -141,216 +159,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
     );
   }
 
-  Widget _buildUserProfileSection() {
-    return Consumer<UserProfileProvider>(
-      builder: (context, profileProvider, child) {
-        if (profileProvider.isLoading) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-
-        if (profileProvider.errorMessage != null) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.error_outline, size: 40, color: Colors.red[300]),
-                const SizedBox(height: 8),
-                Text(
-                  'Failed to load profile',
-                  style: GoogleFonts.poppins(
-                    color: Colors.red[600],
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () => profileProvider.refreshProfile(),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (profileProvider.user == null) {
-          return const SizedBox.shrink();
-        }
-
-        final user = profileProvider.user!;
-        
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                    backgroundImage: user.avatar != null ? NetworkImage(user.avatar!) : null,
-                    child: user.avatar == null
-                        ? Icon(
-                            Icons.person,
-                            size: 30,
-                            color: Theme.of(context).primaryColor,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            user.role.toUpperCase(),
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => profileProvider.refreshProfile(),
-                    icon: const Icon(Icons.refresh),
-                    tooltip: 'Refresh Profile',
-                  ),
-                ],
-              ),
-              if (user.bio.isNotEmpty) ...[
-                const SizedBox(height: 15),
-                Text(
-                  user.bio,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildProfileInfoItem(
-                      Icons.email,
-                      'Email',
-                      user.email,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: _buildProfileInfoItem(
-                      Icons.phone,
-                      'Phone',
-                      user.phoneNumber,
-                    ),
-                  ),
-                ],
-              ),
-              if (user.college.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                _buildProfileInfoItem(
-                  Icons.school,
-                  'Organization',
-                  user.college,
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildProfileInfoItem(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey[500]),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: Colors.grey[500],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildSearchBar() {
     return TextField(

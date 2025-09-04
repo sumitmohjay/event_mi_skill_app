@@ -1,8 +1,10 @@
 import 'dart:typed_data';
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/models/user_model.dart';
 import '../../core/providers/user_profile_provider.dart';
 import '../../event_management/event_management_page.dart';
@@ -533,19 +535,26 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
         'color': Colors.blue,
         'onTap': () => _navigateToEventManagement(context),
       },
-      {
-        'icon': Icons.notifications,
-        'title': 'Add Notification',
-        'subtitle': 'Create and manage notifications',
-        'color': Colors.red,
-        'onTap': () => _navigateToNotificationManagement(context),
-      },
+      // {
+      //   'icon': Icons.notifications,
+      //   'title': 'Add Notification',
+      //   'subtitle': 'Create and manage notifications',
+      //   'color': Colors.red,
+      //   'onTap': () => _navigateToNotificationManagement(context),
+      // },
       {
         'icon': Icons.analytics,
         'title': 'Reporting & Analytics',
         'subtitle': 'View and export event reports',
         'color': Colors.purple,
         'onTap': () => _navigateToReportingAnalytics(context),
+      },
+      {
+        'icon': Icons.logout,
+        'title': 'Logout',
+        'subtitle': 'Sign out from your account',
+        'color': Colors.red,
+        'onTap': () => _showLogoutDialog(context),
       },
     ];
 
@@ -671,72 +680,17 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
 
   Future<void> _pickAndUploadImage() async {
     try {
-      // Create file input element for web
-      final html.FileUploadInputElement uploadInput = html.FileUploadInputElement();
-      uploadInput.accept = 'image/*';
-      uploadInput.click();
-      
-      uploadInput.onChange.listen((e) async {
-        final files = uploadInput.files;
-        if (files!.isEmpty) return;
-        
-        final file = files[0];
-        final reader = html.FileReader();
-        
-        reader.onLoadEnd.listen((e) async {
-          try {
-            setState(() {
-              _isSaving = true;
-            });
-            
-            final Uint8List imageBytes = reader.result as Uint8List;
-            final profileProvider = context.read<UserProfileProvider>();
-            final String? imageUrl = await profileProvider.uploadProfileImageBytes(imageBytes, file.name);
-            
-            if (imageUrl != null) {
-              setState(() {
-                _imageUrl = imageUrl;
-              });
-              
-              // Update profile with new avatar
-              final success = await profileProvider.updateProfile(avatar: imageUrl);
-              
-              if (success && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Profile photo updated successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            } else {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to upload image'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error uploading image: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          } finally {
-            setState(() {
-              _isSaving = false;
-            });
-          }
-        });
-        
-        reader.readAsArrayBuffer(file);
+      setState(() {
+        _isSaving = true;
       });
+
+      if (kIsWeb) {
+        // Web platform - use html package (will be imported conditionally)
+        await _pickImageWeb();
+      } else {
+        // Mobile/Desktop platform - use image_picker
+        await _pickImageMobile();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -746,6 +700,67 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
           ),
         );
       }
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
+  }
+
+  Future<void> _pickImageMobile() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    
+    if (image != null) {
+      final Uint8List imageBytes = await image.readAsBytes();
+      final profileProvider = context.read<UserProfileProvider>();
+      final String? imageUrl = await profileProvider.uploadProfileImageBytes(
+        imageBytes, 
+        image.name,
+      );
+      
+      if (imageUrl != null) {
+        setState(() {
+          _imageUrl = imageUrl;
+        });
+        
+        // Update profile with new avatar
+        final success = await profileProvider.updateProfile(avatar: imageUrl);
+        
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile photo updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to upload image'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _pickImageWeb() async {
+    // This will only be called on web, where dart:html is available
+    // For now, show a message that web upload is not implemented
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Web image upload not implemented yet'),
+          backgroundColor: Colors.orange,
+        ),
+      );
     }
   }
 
@@ -812,6 +827,108 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
     setState(() {
       _isEditing = false;
     });
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Logout',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to logout? You will need to sign in again.',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _performLogout(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
+                'Logout',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _performLogout(BuildContext context) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Call AuthService logout to properly clear tokens and invalidate session
+      final authService = context.read<UserProfileProvider>();
+      // Clear user profile provider data first
+      authService.clearProfile();
+
+      // Clear ALL stored data including access tokens, refresh tokens, user data, and any cached session data
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // This ensures complete cleanup - no token reuse possible
+
+      // Additional cleanup to ensure no authentication state remains
+      await prefs.remove('access_token');
+      await prefs.remove('refresh_token'); 
+      await prefs.remove('user_data');
+      await prefs.remove('phone_number'); // Clear any cached phone number
+      await prefs.remove('user_role'); // Clear any cached role
+      await prefs.remove('login_timestamp'); // Clear any login session data
+
+      // Navigate to login screen and clear navigation stack
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Remove loading dialog
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/',
+          (route) => false, // Remove all previous routes - forces fresh login
+        );
+      }
+    } catch (e) {
+      // Handle logout error
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Remove loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Logout failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
 }

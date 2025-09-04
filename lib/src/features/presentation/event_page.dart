@@ -106,6 +106,7 @@ class _EventPageState extends State<EventPage> {
               pinned: true,
               backgroundColor: Colors.transparent,
               elevation: 0,
+              automaticallyImplyLeading: false,
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: BoxDecoration(
@@ -128,21 +129,37 @@ class _EventPageState extends State<EventPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 30),
-                          Text(
-                            '${widget.eventType ?? 'All'} Events',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${widget.eventType ?? 'All'} Events',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 5),
-                          Text(
-                            'Browse all ${widget.eventType?.toLowerCase() ?? 'available'} events',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 14,
+                          Padding(
+                            padding: const EdgeInsets.only(left: 54),
+                            child: Text(
+                              'Browse all ${widget.eventType?.toLowerCase() ?? 'available'} events',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 20),

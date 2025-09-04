@@ -153,8 +153,7 @@ class _MainPageState extends State<MainPage> {
   // List of page titles for the header
   final List<String> _pageTitles = [
     'Home',
-    'Events',
-    'User',
+    'User Management',
     'Groups',
     'Profile',
   ];
@@ -162,7 +161,6 @@ class _MainPageState extends State<MainPage> {
   // List of pages for navigation
   final List<Widget> _pages = [
     const HomePage(),
-    // const EventPage(),
     const UserManagementPage(),
     const GroupPage(),
     const EventOrganizerProfilePage(),
@@ -172,7 +170,6 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     final items = <Widget>[
       const Icon(Icons.home_outlined, size: 30, color: Colors.white),
-      // const Icon(Icons.event, size: 30, color: Colors.white),
       const Icon(Icons.person_outline, size: 30, color: Colors.white),
       const Icon(Icons.group_outlined, size: 30, color: Colors.white),
       const Icon(Icons.account_circle_outlined, size: 30, color: Colors.white),

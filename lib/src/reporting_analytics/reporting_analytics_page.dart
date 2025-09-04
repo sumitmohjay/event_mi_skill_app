@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'dart:io';
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
@@ -28,80 +27,73 @@ class _ReportingAnalyticsPageState extends State<ReportingAnalyticsPage> {
     _reportsFuture = _repository.getReports();
   }
 
-  Future<void> _exportReport(EventReport report, String format) async {
-    try {
-      Uint8List fileBytes;
-      String fileName;
-      String fileExtension;
+  // Future<void> _exportReport(EventReport report, String format) async {
+  //   try {
+  //     Uint8List fileBytes;
+  //     String fileName;
+  //     String fileExtension;
 
-      if (format == 'excel') {
-        fileBytes = await _repository.generateExcelReport(report);
-        fileName = '${report.eventName.replaceAll(' ', '_')}_report.xlsx';
-        fileExtension = 'xlsx';
-      } else {
-        fileBytes = await _repository.generatePdfReport(report);
-        fileName = '${report.eventName.replaceAll(' ', '_')}_report.pdf';
-        fileExtension = 'pdf';
-      }
+  //     if (format == 'excel') {
+  //       fileBytes = await _repository.generateExcelReport(report);
+  //       fileName = '${report.eventName.replaceAll(' ', '_')}_report.xlsx';
+  //       fileExtension = 'xlsx';
+  //     } else {
+  //       fileBytes = await _repository.generatePdfReport(report);
+  //       fileName = '${report.eventName.replaceAll(' ', '_')}_report.pdf';
+  //       fileExtension = 'pdf';
+  //     }
 
-      if (kIsWeb) {
-        // For web
-        final blob = html.Blob([fileBytes]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
-          ..setAttribute('download', fileName)
-          ..click();
-        html.Url.revokeObjectUrl(url);
-        
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Downloading $fileName...'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        return;
-      }
+  //     if (kIsWeb) {
+  //       // For web - show message that web download is not implemented
+  //       if (!mounted) return;
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //           content: Text('Web download not implemented yet'),
+  //           backgroundColor: Colors.orange,
+  //         ),
+  //       );
+  //       return;
+  //     }
 
-      // For mobile and desktop
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsBytes(fileBytes);
+  //     // For mobile and desktop
+  //     final directory = await getApplicationDocumentsDirectory();
+  //     final file = File('${directory.path}/$fileName');
+  //     await file.writeAsBytes(fileBytes);
       
-      if (Platform.isAndroid || Platform.isIOS) {
-        // On mobile, use the share dialog
-        await Share.shareXFiles(
-          [XFile(file.path, mimeType: 'application/$fileExtension')],
-          sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
-        );
-      } else {
-        // On desktop, just show a success message
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Report saved to ${file.path}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+  //     if (Platform.isAndroid || Platform.isIOS) {
+  //       // On mobile, use the share dialog
+  //       await Share.shareXFiles(
+  //         [XFile(file.path, mimeType: 'application/$fileExtension')],
+  //         sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
+  //       );
+  //     } else {
+  //       // On desktop, just show a success message
+  //       if (!mounted) return;
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('Report saved to ${file.path}'),
+  //           backgroundColor: Colors.green,
+  //         ),
+  //       );
+  //     }
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Report exported as $format'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error exporting report: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  //     if (!mounted) return;
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text('Report exported as $format'),
+  //         backgroundColor: Colors.green,
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     if (!mounted) return;
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text('Error exporting report: $e'),
+  //         backgroundColor: Colors.red,
+  //       ),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -178,28 +170,28 @@ class _ReportingAnalyticsPageState extends State<ReportingAnalyticsPage> {
               ],
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _exportReport(report, 'excel'),
-                  icon: const Icon(Icons.table_chart, size: 20),
-                  label: const Text('Export as Excel'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () => _exportReport(report, 'pdf'),
-                  icon: const Icon(Icons.picture_as_pdf, size: 20),
-                  label: const Text('Export as PDF'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
-                ),
-              ],
-            ),
+            // Row(
+            //   mainAxisAlignment: MainAxisAlignment.end,
+            //   children: [
+            //     TextButton.icon(
+            //       onPressed: () => _exportReport(report, 'excel'),
+            //       icon: const Icon(Icons.table_chart, size: 20),
+            //       label: const Text('Export as Excel'),
+            //       style: TextButton.styleFrom(
+            //         foregroundColor: Colors.green,
+            //       ),
+            //     ),
+            //     const SizedBox(width: 8),
+            //     TextButton.icon(
+            //       onPressed: () => _exportReport(report, 'pdf'),
+            //       icon: const Icon(Icons.picture_as_pdf, size: 20),
+            //       label: const Text('Export as PDF'),
+            //       style: TextButton.styleFrom(
+            //         foregroundColor: Colors.red,
+            //       ),
+            //     ),
+            //   ],
+            // ),
           ],
         ),
       ),
