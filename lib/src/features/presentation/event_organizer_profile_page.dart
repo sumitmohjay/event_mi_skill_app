@@ -1,11 +1,12 @@
-import 'package:event_mi_skill/src/reporting_analytics/reporting_analytics_page.dart';
+import 'dart:typed_data';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../core/models/user_model.dart';
 import '../../core/providers/user_profile_provider.dart';
 import '../../event_management/event_management_page.dart';
+import '../../reporting_analytics/reporting_analytics_page.dart';
 
 class EventOrganizerProfilePage extends StatefulWidget {
   const EventOrganizerProfilePage({super.key});
@@ -26,7 +27,8 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
   bool _isEditing = false;
   bool _isSaving = false;
   String? _imageUrl;
-  final ImagePicker _picker = ImagePicker();
+  // Stats loading state - now using provider
+  bool isLoadingStats = false;
   
   // Form key for validation
   final _formKey = GlobalKey<FormState>();
@@ -64,14 +66,16 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
     return Consumer<UserProfileProvider>(
       builder: (context, profileProvider, child) {
         // Update controllers when profile data changes
-        final user = profileProvider.user;
-        if (user != null && !_isEditing) {
-          _nameController.text = user.name;
-          _emailController.text = user.email ?? '';
-          _phoneController.text = user.phoneNumber ?? '';
-          _bioController.text = user.bio ?? '';
-          _addressController.text = user.address ?? '';
-          // _collegeController.text = user.college ?? '';
+        if (!_isEditing) {
+          final user = profileProvider.user;
+          if (user != null) {
+            _nameController.text = user.name;
+            _emailController.text = user.email;
+            _phoneController.text = user.phoneNumber;
+            _bioController.text = user.bio;
+            _addressController.text = user.address;
+            // _collegeController.text = user.college;
+          }
         }
         
         return Scaffold(
@@ -93,8 +97,6 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
                         _buildProfileCard(context, profileProvider),
                       const SizedBox(height: 20),
                       _buildMenuOptions(context),
-                      const SizedBox(height: 20),
-                      _buildStatsCard(context),
                     ],
                   ),
                 ),
@@ -153,7 +155,6 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
 
   Widget _buildSliverAppBar(
       BuildContext context, UserProfileProvider profileProvider) {
-    final user = profileProvider.user;
     return SliverAppBar(
       expandedHeight: 200.0,
       pinned: true,
@@ -202,7 +203,7 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
               ),
             ),
             // Profile info
-            if (user != null) _buildProfileHeader(user),
+            if (profileProvider.user != null) _buildProfileHeader(profileProvider.user!),
           ],
         ),
       ),
@@ -278,15 +279,16 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
-                      Text(
-                        user.college ?? '',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                      if (user.college.isNotEmpty)
+                        Text(
+                          user.college,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
                     ],
                   ),
                 ),
@@ -340,10 +342,9 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
                     setState(() {
                       _isEditing = true;
                       _nameController.text = user.name;
-                      _emailController.text = user.email ?? '';
-                      _phoneController.text = user.phoneNumber ?? '';
-                      _bioController.text = user.bio ?? '';
-                      _addressController.text = user.address ?? '';
+                      _phoneController.text = user.phoneNumber;
+                      _bioController.text = user.bio;
+                      _addressController.text = user.address;
                       // _collegeController.text = user.college ?? '';
                     });
                   },
@@ -352,15 +353,21 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
             ],
           ),
           const SizedBox(height: 24),
-          _buildProfileField(Icons.person, 'Name', user.name, _nameController),
-          const SizedBox(height: 16),
-          _buildProfileField(Icons.email_outlined, 'Email', user.email ?? '', _emailController, isReadOnly: true),
-          const SizedBox(height: 16),
-          _buildProfileField(Icons.phone_outlined, 'Phone', user.phoneNumber ?? '', _phoneController, isReadOnly: true),
-          const SizedBox(height: 16),
-          _buildProfileField(Icons.info_outline, 'Bio', user.bio ?? '', _bioController),
-          const SizedBox(height: 16),
-          _buildProfileField(Icons.location_on_outlined, 'Address', user.address ?? '', _addressController),
+          if (!_isEditing) ...[
+            _buildProfileField(Icons.person, 'Name', user.name, _nameController),
+            if (user.phoneNumber.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildProfileField(Icons.phone_outlined, 'Phone', user.phoneNumber, _phoneController),
+            ],
+          ] else ...[
+            _buildProfileField(Icons.person, 'Name', user.name, _nameController),
+            const SizedBox(height: 16),
+            _buildProfileField(Icons.info_outline, 'Bio', user.bio, _bioController),
+            const SizedBox(height: 16),
+            _buildProfileField(Icons.phone_outlined, 'Phone', user.phoneNumber ?? '', _phoneController),
+            const SizedBox(height: 16),
+            _buildProfileField(Icons.location_on_outlined, 'Address', user.address, _addressController),
+          ],
           const SizedBox(height: 16),
           // _buildProfileField(Icons.school_outlined, 'College', user.college ?? '', _collegeController),
           if (_isEditing) ...[
@@ -474,7 +481,7 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
                       isDense: true,
-                      hintText: isReadOnly ? 'Cannot be changed' : null,
+                      hintText: _getHintText(label),
                       hintStyle: GoogleFonts.poppins(
                         fontSize: 14,
                         color: Colors.grey[400],
@@ -500,6 +507,21 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
         ],
       ),
     );
+  }
+
+  String _getHintText(String label) {
+    switch (label) {
+      case 'Name':
+        return 'Enter your full name';
+      case 'Bio':
+        return 'Tell us about yourself';
+      case 'Phone':
+        return 'Enter your phone number';
+      case 'Address':
+        return 'Enter your address';
+      default:
+        return 'Enter $label';
+    }
   }
 
   Widget _buildMenuOptions(BuildContext context) {
@@ -620,77 +642,7 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
     );
   }
 
-  Widget _buildStatsCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick Stats',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              Expanded(child: _buildStatItem('Total Events', '0', Colors.blue)),
-              Expanded(
-                child: _buildStatItem('Active Events', '0', Colors.green),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildStatItem(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: color.withOpacity(0.8),
-            ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
-        ],
-      ),
-    );
-  }
 
   void _navigateToEventManagement(BuildContext context) {
     Navigator.push(
@@ -718,14 +670,82 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image upload not available in web version. Please use mobile app for image uploads.'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 3),
-        ),
-      );
+    try {
+      // Create file input element for web
+      final html.FileUploadInputElement uploadInput = html.FileUploadInputElement();
+      uploadInput.accept = 'image/*';
+      uploadInput.click();
+      
+      uploadInput.onChange.listen((e) async {
+        final files = uploadInput.files;
+        if (files!.isEmpty) return;
+        
+        final file = files[0];
+        final reader = html.FileReader();
+        
+        reader.onLoadEnd.listen((e) async {
+          try {
+            setState(() {
+              _isSaving = true;
+            });
+            
+            final Uint8List imageBytes = reader.result as Uint8List;
+            final profileProvider = context.read<UserProfileProvider>();
+            final String? imageUrl = await profileProvider.uploadProfileImageBytes(imageBytes, file.name);
+            
+            if (imageUrl != null) {
+              setState(() {
+                _imageUrl = imageUrl;
+              });
+              
+              // Update profile with new avatar
+              final success = await profileProvider.updateProfile(avatar: imageUrl);
+              
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Profile photo updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } else {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to upload image'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error uploading image: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          } finally {
+            setState(() {
+              _isSaving = false;
+            });
+          }
+        });
+        
+        reader.readAsArrayBuffer(file);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -737,10 +757,11 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
     try {
       final profileProvider = context.read<UserProfileProvider>();
       
-      // Call the API to update profile with all fields
+      // Call the API to update profile with editable fields only
       final success = await profileProvider.updateProfile(
         name: _nameController.text.trim(),
         bio: _bioController.text.trim(),
+        phone: _phoneController.text.trim(),
         address: _addressController.text.trim(),
         avatar: _imageUrl,
       );
@@ -748,7 +769,6 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
       if (success) {
         setState(() {
           _isEditing = false;
-          _isSaving = false;
         });
         
         if (mounted) {
@@ -784,12 +804,14 @@ class _EventOrganizerProfilePageState extends State<EventOrganizerProfilePage> {
     
     if (user != null) {
       _nameController.text = user.name;
-      _emailController.text = user.email;
       _phoneController.text = user.phoneNumber;
+      _bioController.text = user.bio;
+      _addressController.text = user.address;
     }
     
     setState(() {
       _isEditing = false;
     });
   }
+
 }

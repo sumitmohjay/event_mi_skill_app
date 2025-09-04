@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,22 +21,25 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _venueController = TextEditingController();
-  final _maxAttendeesController = TextEditingController();
-  final _priceController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _maxParticipantsController = TextEditingController();
   final _contactEmailController = TextEditingController();
   final _contactPhoneController = TextEditingController();
-  final _meetingLinkController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _meetingLinkController = TextEditingController();
+  final _priceController = TextEditingController();
 
   DateTime _selectedDateTime = DateTime.now().add(const Duration(days: 1));
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
+  DateTime? _registrationDeadline;
   TimeOfDay? _selectedStartTime;
   TimeOfDay? _selectedEndTime;
   EventMode _selectedMode = EventMode.offline;
   EventCategory _selectedCategory = EventCategory.other;
   List<String> _resources = [];
+  List<String> _selectedImages = [];
+  List<String> _selectedVideos = [];
   String? _imageUrl;
   bool _isLoading = false;
 
@@ -93,12 +98,11 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
   void _populateFieldsWithEvent(Event event) {
     _titleController.text = event.title;
     _descriptionController.text = event.description;
-    _venueController.text = event.venue ?? '';
-    _maxAttendeesController.text = event.maxAttendees.toString();
-    _priceController.text = event.price?.toString() ?? '';
+    _locationController.text = event.location;
+    _maxParticipantsController.text = event.maxAttendees?.toString() ?? '';
     _contactEmailController.text = event.contactEmail ?? '';
-    _contactPhoneController.text = event.contactPhone ?? '';
     _meetingLinkController.text = event.meetingLink ?? '';
+    _priceController.text = event.price?.toString() ?? '';
     _tagsController.text = event.tags.join(', ');
     _selectedDateTime = event.dateTime ?? DateTime.now();
     
@@ -129,7 +133,10 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     
     _selectedMode = event.mode ?? EventMode.offline;
     _selectedCategory = event.category ?? EventCategory.other;
+    _registrationDeadline = event.registrationDeadline;
     _resources = List.from(event.resources);
+    _selectedImages = List.from(event.images);
+    _selectedVideos = List.from(event.videos);
     _imageUrl = event.imageUrl;
   }
 
@@ -176,7 +183,11 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
               const SizedBox(height: 20),
               _buildCapacityPriceSection(),
               const SizedBox(height: 20),
-              // _buildContactSection(),
+              _buildContactSection(),
+              const SizedBox(height: 20),
+              _buildRegistrationDeadlineSection(),
+              const SizedBox(height: 20),
+              _buildMediaSection(),
               const SizedBox(height: 20),
               _buildResourcesSection(),
               const SizedBox(height: 20),
@@ -197,12 +208,6 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
           controller: _titleController,
           label: 'Event Title',
           hint: 'Enter event title',
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter event title';
-            }
-            return null;
-          },
         ),
         const SizedBox(height: 15),
         _buildTextField(
@@ -210,12 +215,6 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
           label: 'Description',
           hint: 'Enter event description',
           maxLines: 4,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter event description';
-            }
-            return null;
-          },
         ),
       ],
     );
@@ -383,17 +382,11 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
       'Venue',
       [
         _buildTextField(
-          controller: _venueController,
+          controller: _locationController,
           label: 'Venue/Location',
           hint: _selectedMode == EventMode.online 
               ? 'Platform name (e.g., Zoom, Google Meet)'
               : 'Enter venue address',
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter venue/location';
-            }
-            return null;
-          },
         ),
         if (_selectedMode == EventMode.online || _selectedMode == EventMode.hybrid) ...[
           const SizedBox(height: 15),
@@ -506,19 +499,10 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
           children: [
             Expanded(
               child: _buildTextField(
-                controller: _maxAttendeesController,
+                controller: _maxParticipantsController,
                 label: 'Max Attendees',
                 hint: 'Enter maximum capacity',
                 keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter max attendees';
-                  }
-                  if (int.tryParse(value) == null || int.parse(value) <= 0) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
               ),
             ),
             const SizedBox(width: 15),
@@ -528,14 +512,6 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
                 label: 'Price (Optional)',
                 hint: 'Enter price or leave empty for free',
                 keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    if (double.tryParse(value) == null || double.parse(value) < 0) {
-                      return 'Please enter a valid price';
-                    }
-                  }
-                  return null;
-                },
               ),
             ),
           ],
@@ -544,26 +520,255 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     );
   }
 
-  // Widget _buildContactSection() {
-  //   return _buildSection(
-  //     'Contact Information',
-  //     [
-  //       _buildTextField(
-  //         controller: _contactEmailController,
-  //         label: 'Contact Email',
-  //         hint: 'Enter contact email',
-  //         keyboardType: TextInputType.emailAddress,
-  //       ),
-  //       const SizedBox(height: 15),
-  //       _buildTextField(
-  //         controller: _contactPhoneController,
-  //         label: 'Contact Phone',
-  //         hint: 'Enter contact phone number',
-  //         keyboardType: TextInputType.phone,
-  //       ),
-  //     ],
-  //   );
-  // }
+  Widget _buildMediaSection() {
+    return _buildSection(
+      'Event Media',
+      [
+        // Images Section
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Event Images',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _pickImages,
+              icon: const Icon(Icons.add_photo_alternate, size: 18),
+              label: Text(
+                'Add Images',
+                style: GoogleFonts.poppins(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        if (_selectedImages.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _selectedImages.length,
+              itemBuilder: (context, index) {
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  width: 100,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: kIsWeb
+                            ? Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.grey[200],
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.image,
+                                      color: Colors.grey[600],
+                                      size: 30,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Image\nSelected',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Image.file(
+                                File(_selectedImages[index]),
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 100,
+                                    height: 100,
+                                    color: Colors.grey[200],
+                                    child: Icon(
+                                      Icons.image,
+                                      color: Colors.grey[400],
+                                      size: 40,
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => _removeImage(index),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        // Videos Section
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Event Videos',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _pickVideos,
+              icon: const Icon(Icons.video_library, size: 18),
+              label: Text(
+                'Add Videos',
+                style: GoogleFonts.poppins(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        if (_selectedVideos.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          ...List.generate(_selectedVideos.length, (index) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.video_file, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _selectedVideos[index].split('/').last,
+                      style: GoogleFonts.poppins(fontSize: 12),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _removeVideo(index),
+                    icon: const Icon(Icons.close, size: 16),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildContactSection() {
+    return _buildSection(
+      'Contact Information',
+      [
+        _buildTextField(
+          controller: _contactEmailController,
+          label: 'Contact Email',
+          hint: 'Enter contact email',
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 15),
+        _buildTextField(
+          controller: _contactPhoneController,
+          label: 'Contact Phone',
+          hint: 'Enter contact phone number',
+          keyboardType: TextInputType.phone,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRegistrationDeadlineSection() {
+    return _buildSection(
+      'Registration Deadline',
+      [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            'Registration Deadline',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          subtitle: Text(
+            _registrationDeadline != null 
+                ? DateFormat('MMM dd, yyyy - hh:mm a').format(_registrationDeadline!)
+                : 'Select registration deadline',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.grey[600],
+            ),
+          ),
+          trailing: Icon(
+            Icons.event_available,
+            color: const Color(0xFF4F46E5),
+          ),
+          onTap: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: _registrationDeadline ?? DateTime.now().add(const Duration(hours: 12)),
+              firstDate: DateTime.now(),
+              lastDate: _selectedStartDate ?? DateTime.now().add(const Duration(days: 365)),
+            );
+            if (date != null) {
+              final time = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.fromDateTime(_registrationDeadline ?? DateTime.now()),
+              );
+              if (time != null) {
+                setState(() {
+                  _registrationDeadline = DateTime(
+                    date.year,
+                    date.month,
+                    date.day,
+                    time.hour,
+                    time.minute,
+                  );
+                });
+              }
+            }
+          },
+        ),
+      ],
+    );
+  }
 
   Widget _buildResourcesSection() {
     return _buildSection(
@@ -842,6 +1047,70 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     }
   }
 
+  Future<void> _pickImages() async {
+    print('📸 Starting image picker...');
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage();
+    
+    print('📸 Picked ${images.length} images');
+    for (int i = 0; i < images.length; i++) {
+      print('📸 Image $i: ${images[i].path}');
+    }
+    
+    if (images.isNotEmpty) {
+      setState(() {
+        _selectedImages.addAll(images.map((image) => image.path));
+      });
+      
+      print('📸 Total selected images now: ${_selectedImages.length}');
+      print('📸 Selected images: $_selectedImages');
+      
+      // If this is a new event, set the first image as the main image
+      if (_imageUrl == null && _selectedImages.isNotEmpty) {
+        setState(() {
+          _imageUrl = _selectedImages.first;
+        });
+      }
+    } else {
+      print('📸 No images were selected');
+    }
+  }
+
+  Future<void> _pickVideos() async {
+    print('🎥 Starting video picker...');
+    final picker = ImagePicker();
+    final video = await picker.pickVideo(source: ImageSource.gallery);
+    
+    if (video != null) {
+      print('🎥 Picked video: ${video.path}');
+      setState(() {
+        _selectedVideos.add(video.path);
+      });
+      print('🎥 Total selected videos now: ${_selectedVideos.length}');
+      print('🎥 Selected videos: $_selectedVideos');
+    } else {
+      print('🎥 No video was selected');
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      final removedImage = _selectedImages.removeAt(index);
+      // If this was the main image, update it
+      if (_imageUrl == removedImage && _selectedImages.isNotEmpty) {
+        _imageUrl = _selectedImages.first;
+      } else if (_imageUrl == removedImage) {
+        _imageUrl = null;
+      }
+    });
+  }
+
+  void _removeVideo(int index) {
+    setState(() {
+      _selectedVideos.removeAt(index);
+    });
+  }
+
   void _addFileUrl() {
     Navigator.pop(context);
     final controller = TextEditingController();
@@ -903,7 +1172,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
       final existingVideos = widget.event?.videos ?? [];
       
       // Get new images from resources (filter by common image extensions)
-      final newImages = _resources.where((resource) {
+      final resourceImages = _resources.where((resource) {
         final lower = resource.toLowerCase();
         return lower.endsWith('.jpg') || 
               lower.endsWith('.jpeg') ||
@@ -912,16 +1181,24 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
       }).toList();
       
       // Get new videos from resources (filter by common video extensions)
-      final newVideos = _resources.where((resource) {
+      final resourceVideos = _resources.where((resource) {
         final lower = resource.toLowerCase();
         return lower.endsWith('.mp4') || 
               lower.endsWith('.mov') ||
               lower.endsWith('.avi');
       }).toList();
       
-      // Combine existing and new media, removing duplicates
-      final allImages = {...existingImages, ...newImages}.toList();
-      final allVideos = {...existingVideos, ...newVideos}.toList();
+      // Combine all image sources, removing duplicates
+      final allImages = {...existingImages, ...resourceImages, ..._selectedImages}.toList();
+      final allVideos = {...existingVideos, ...resourceVideos, ..._selectedVideos}.toList();
+      
+      // Debug logging
+      print('🖼️ Selected Images: $_selectedImages');
+      print('🎥 Selected Videos: $_selectedVideos');
+      print('📁 Resource Images: $resourceImages');
+      print('📁 Resource Videos: $resourceVideos');
+      print('🔗 All Images: $allImages');
+      print('🔗 All Videos: $allVideos');
       
       // Get the main image URL (first image if available, otherwise use existing or null)
       final mainImageUrl = allImages.isNotEmpty 
@@ -932,7 +1209,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
         id: widget.event?.id ?? '',
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        location: _venueController.text.trim(),
+        location: _locationController.text.trim(),
         images: allImages,
         videos: allVideos,
         createdBy: const CreatedBy(id: '', name: 'Current User', email: ''),
@@ -945,18 +1222,20 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
         startTime: _selectedStartTime != null ? '${_selectedStartTime!.hour.toString().padLeft(2, '0')}:${_selectedStartTime!.minute.toString().padLeft(2, '0')}' : null,
         endTime: _selectedEndTime != null ? '${_selectedEndTime!.hour.toString().padLeft(2, '0')}:${_selectedEndTime!.minute.toString().padLeft(2, '0')}' : null,
         dateTime: _selectedDateTime,
-        venue: _venueController.text.trim(),
+        venue: _locationController.text.trim(),
         mode: _selectedMode,
         category: _selectedCategory,
         resources: _resources,
         imageUrl: mainImageUrl,
-        price: _priceController.text.isNotEmpty ? double.parse(_priceController.text) : null,
-        maxAttendees: int.tryParse(_maxAttendeesController.text) ?? 0,
+        price: double.tryParse(_priceController.text.trim()),
+        maxAttendees: int.tryParse(_maxParticipantsController.text.trim()) ?? 0,
         currentAttendees: widget.event?.currentAttendees ?? 0,
         organizerId: 'current_user_id',
         organizerName: 'Current User',
         tags: tags,
-        meetingLink: _meetingLinkController.text.trim().isNotEmpty ? _meetingLinkController.text.trim() : null,
+        meetingLink: _meetingLinkController.text.trim().isNotEmpty 
+            ? _meetingLinkController.text.trim() 
+            : null,
         contactEmail: _contactEmailController.text.trim().isNotEmpty ? _contactEmailController.text.trim() : null,
         contactPhone: _contactPhoneController.text.trim().isNotEmpty ? _contactPhoneController.text.trim() : null,
       );
@@ -1009,8 +1288,8 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _venueController.dispose();
-    _maxAttendeesController.dispose();
+    _locationController.dispose();
+    _maxParticipantsController.dispose();
     _priceController.dispose();
     _contactEmailController.dispose();
     _contactPhoneController.dispose();

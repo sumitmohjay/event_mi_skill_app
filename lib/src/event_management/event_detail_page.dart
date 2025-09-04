@@ -124,8 +124,8 @@ class _EventDetailPageState extends State<EventDetailPage> {
                   ],
                   // _buildContactInfo(event),
                   const SizedBox(height: 20),
-                  _buildActionButtons(context, event),
-                  const SizedBox(height: 40),
+                  // _buildActionButtons(context, event),
+                  // const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -830,112 +830,112 @@ class _EventDetailPageState extends State<EventDetailPage> {
   //   );
   // }
 
-  Widget _buildActionButtons(BuildContext context, Event event) {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => _editEvent(context),
-            icon: const Icon(Icons.edit, size: 18),
-            label: Text(
-              'Edit Event',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 15),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => _deleteEvent(context),
-            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-            label: Text(
-              'Delete Event',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.red),
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // Widget _buildActionButtons(BuildContext context, Event event) {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: ElevatedButton.icon(
+  //           onPressed: () => _editEvent(context),
+  //           icon: const Icon(Icons.edit, size: 18),
+  //           label: Text(
+  //             'Edit Event',
+  //             style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+  //           ),
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Theme.of(context).primaryColor,
+  //             foregroundColor: Colors.white,
+  //             padding: const EdgeInsets.symmetric(vertical: 15),
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.circular(12),
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //       const SizedBox(width: 15),
+  //       Expanded(
+  //         child: OutlinedButton.icon(
+  //           onPressed: () => _deleteEvent(context),
+  //           icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+  //           label: Text(
+  //             'Delete Event',
+  //             style: GoogleFonts.poppins(
+  //               fontWeight: FontWeight.w600,
+  //               color: Colors.red,
+  //             ),
+  //           ),
+  //           style: OutlinedButton.styleFrom(
+  //             side: const BorderSide(color: Colors.red),
+  //             padding: const EdgeInsets.symmetric(vertical: 15),
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.circular(12),
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
 
-  void _editEvent(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CreateEditEventPage(event: _event!),
-      ),
-    );
-  }
+  // void _editEvent(BuildContext context) {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (context) => CreateEditEventPage(event: _event!),
+  //     ),
+  //   );
+  // }
 
-  void _deleteEvent(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Delete Event',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'Are you sure you want to delete "${_event!.title}"? This action cannot be undone.',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final success = await context.read<EventProvider>().deleteEvent(_event!.id);
-              if (success && context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Event deleted successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to delete event'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: Text(
-              'Delete',
-              style: GoogleFonts.poppins(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _deleteEvent(BuildContext context) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: Text(
+  //         'Delete Event',
+  //         style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+  //       ),
+  //       content: Text(
+  //         'Are you sure you want to delete "${_event!.title}"? This action cannot be undone.',
+  //         style: GoogleFonts.poppins(),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: Text(
+  //             'Cancel',
+  //             style: GoogleFonts.poppins(),
+  //           ),
+  //         ),
+  //         TextButton(
+  //           onPressed: () async {
+  //             Navigator.pop(context);
+  //             final success = await context.read<EventProvider>().deleteEvent(_event!.id);
+  //             if (success && context.mounted) {
+  //               Navigator.pop(context);
+  //               ScaffoldMessenger.of(context).showSnackBar(
+  //                 const SnackBar(
+  //                   content: Text('Event deleted successfully'),
+  //                   backgroundColor: Colors.green,
+  //                 ),
+  //               );
+  //             } else if (context.mounted) {
+  //               ScaffoldMessenger.of(context).showSnackBar(
+  //                 const SnackBar(
+  //                   content: Text('Failed to delete event'),
+  //                   backgroundColor: Colors.red,
+  //                 ),
+  //               );
+  //             }
+  //           },
+  //           child: Text(
+  //             'Delete',
+  //             style: GoogleFonts.poppins(color: Colors.red),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);

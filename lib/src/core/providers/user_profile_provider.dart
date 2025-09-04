@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -10,11 +11,15 @@ class UserProfileProvider with ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _errorMessage;
+  Map<String, dynamic>? _dashboardStats;
+  bool _isLoadingStats = false;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasProfile => _user != null;
+  Map<String, dynamic>? get dashboardStats => _dashboardStats;
+  bool get isLoadingStats => _isLoadingStats;
 
   // Load user profile from API
   Future<void> loadUserProfile() async {
@@ -80,7 +85,18 @@ class UserProfileProvider with ChangeNotifier {
     }
   }
 
-  // Upload profile image
+  // Upload profile image with bytes (web-compatible)
+  Future<String?> uploadProfileImageBytes(Uint8List imageBytes, String fileName) async {
+    try {
+      return await _authService.uploadProfileImageBytes(imageBytes, fileName);
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Legacy method for backward compatibility
   Future<String?> uploadProfileImage(String imagePath) async {
     try {
       return await _authService.uploadProfileImage(imagePath);
@@ -97,6 +113,21 @@ class UserProfileProvider with ChangeNotifier {
     _errorMessage = null;
     _isLoading = false;
     notifyListeners();
+  }
+
+  // Load dashboard statistics
+  Future<void> loadDashboardStats() async {
+    _isLoadingStats = true;
+    notifyListeners();
+
+    try {
+      _dashboardStats = await _authService.getDashboardStats();
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoadingStats = false;
+      notifyListeners();
+    }
   }
 
   // Refresh profile

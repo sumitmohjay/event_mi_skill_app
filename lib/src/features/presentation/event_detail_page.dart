@@ -1,40 +1,217 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/app_header.dart';
+import '../../event_management/event.dart';
+import '../../event_management/provider/event_provider.dart';
 
 class EventDetailPage extends StatefulWidget {
-  final Map<String, dynamic> event;
+  final Map<String, dynamic>? event;
+  final String? slug;
 
-  const EventDetailPage({super.key, required this.event});
+  const EventDetailPage({super.key, this.event, this.slug});
 
   @override
   State<EventDetailPage> createState() => _EventDetailPageState();
 }
 
 class _EventDetailPageState extends State<EventDetailPage> {
-  int _selectedImageCategory = 0;
-  final List<String> _imageCategories = ['All', 'Certificate', 'Behind Scene'];
+  Event? _apiEvent;
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  // Sample event images for different categories
-  final List<String> _eventImages = [
-    'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400',
-    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400',
-    'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400',
-    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400',
-    'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400',
-    'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400',
-    'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    if (widget.slug != null && widget.event == null) {
+      _loadEventData();
+    }
+  }
+
+  Future<void> _loadEventData() async {
+    if (widget.slug != null && widget.slug!.isNotEmpty) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      try {
+        final eventProvider = Provider.of<EventProvider>(context, listen: false);
+        final event = await eventProvider.loadEventBySlug(widget.slug!);
+        
+        if (event != null) {
+          setState(() {
+            _apiEvent = event;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _errorMessage = 'Event not found';
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'Failed to get event: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Fallback images when no API images available
+  // final List<String> _fallbackImages = [
+  //   'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400',
+  //   'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400',
+  //   'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
+  //   'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400',
+  // ];
+
+  List<String> get eventImages {
+    final event = currentEvent;
+    final apiImages = event['images'] as List<String>? ?? [];
+    return apiImages.isNotEmpty ? apiImages : ['https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400'];
+  }
+
+  Map<String, dynamic> get currentEvent {
+    if (_apiEvent != null) {
+      // Format time properly
+      String formatTime(String? time) {
+        if (time == null || time.isEmpty) return 'TBD';
+        try {
+          final parts = time.split(':');
+          if (parts.length >= 2) {
+            final hour = int.parse(parts[0]);
+            final minute = int.parse(parts[1]);
+            final period = hour >= 12 ? 'PM' : 'AM';
+            final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+            return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
+          }
+        } catch (e) {
+          return time;
+        }
+        return time;
+      }
+
+      // Format date properly
+      String formatDate(DateTime? date) {
+        if (date == null) return 'TBD';
+        return '${date.day}/${date.month}/${date.year}';
+      }
+
+      final startTimeFormatted = formatTime(_apiEvent!.startTime);
+      final endTimeFormatted = formatTime(_apiEvent!.endTime);
+      
+      return {
+        // Basic Info
+        'id': _apiEvent!.id,
+        'title': _apiEvent!.title,
+        'description': _apiEvent!.description,
+        'location': _apiEvent!.location,
+        'slug': _apiEvent!.slug,
+        
+        // Timing
+        'startTime': startTimeFormatted,
+        'endTime': endTimeFormatted,
+        'time': '$startTimeFormatted - $endTimeFormatted',
+        'startDate': _apiEvent!.startDate,
+        'endDate': _apiEvent!.endDate,
+        'startDateFormatted': formatDate(_apiEvent!.startDate),
+        'endDateFormatted': formatDate(_apiEvent!.endDate),
+        'registrationDeadline': _apiEvent!.registrationDeadline,
+        'registrationDeadlineFormatted': formatDate(_apiEvent!.registrationDeadline),
+        
+        // Event Details
+        'eventType': _apiEvent!.mode?.name ?? 'offline',
+        'category': _apiEvent!.category?.name ?? 'other',
+        'price': _apiEvent!.price ?? 0.0,
+        'maxParticipants': _apiEvent!.maxAttendees ?? 0,
+        'currentAttendees': _apiEvent!.currentAttendees ?? 0,
+        'isActive': _apiEvent!.isActive,
+        
+        // Media
+        'image': _apiEvent!.images.isNotEmpty ? _apiEvent!.images.first : null,
+        'images': _apiEvent!.images,
+        'videos': _apiEvent!.videos,
+        'imageUrl': _apiEvent!.imageUrl,
+        
+        // Organizer Info
+        'organizerName': _apiEvent!.createdBy.name,
+        'organizerEmail': _apiEvent!.createdBy.email,
+        'organizerId': _apiEvent!.createdBy.id,
+        'contactEmail': _apiEvent!.contactEmail,
+        'contactPhone': _apiEvent!.contactPhone,
+        
+        // Participant Stats
+        'totalEnrollments': _apiEvent!.participantStats?.totalEnrollments ?? 0,
+        'approvedParticipants': _apiEvent!.participantStats?.approvedParticipants ?? 0,
+        'pendingRequests': _apiEvent!.participantStats?.pendingRequests ?? 0,
+        'declinedRequests': _apiEvent!.participantStats?.declinedRequests ?? 0,
+        'availableSpots': _apiEvent!.participantStats?.availableSpots ?? 0,
+        'attendees': _apiEvent!.participantStats?.totalEnrollments.toString() ?? '0',
+        
+        // Additional Info
+        'tags': _apiEvent!.tags,
+        'resources': _apiEvent!.resources,
+        'meetingLink': _apiEvent!.meetingLink,
+        'venue': _apiEvent!.venue,
+        
+        // Timestamps
+        'createdAt': _apiEvent!.createdAt,
+        'updatedAt': _apiEvent!.updatedAt,
+        'createdAtFormatted': formatDate(_apiEvent!.createdAt),
+        'updatedAtFormatted': formatDate(_apiEvent!.updatedAt),
+      };
+    }
+    return widget.event ?? {};
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppHeader(
+          title: 'Loading...',
+          showBackButton: true,
+          onBackPressed: () => Navigator.of(context).pop(),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: AppHeader(
+          title: 'Error',
+          showBackButton: true,
+          onBackPressed: () => Navigator.of(context).pop(),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(_errorMessage!, style: GoogleFonts.poppins(fontSize: 16)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadEventData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final event = currentEvent;
+
     return Scaffold(
       appBar: AppHeader(
-        title: widget.event['title'] ?? 'Event Details',
+        title: event['title'] ?? 'Event Details',
         showBackButton: true,
         onBackPressed: () => Navigator.of(context).pop(),
       ),
@@ -43,7 +220,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Event Main Image
-            _buildEventMainImage(screenWidth, screenHeight),
+            _buildEventMainImage(screenWidth, screenHeight, event),
             
             // Event Content
             Padding(
@@ -52,37 +229,73 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Event Title and Price
-                  _buildEventHeader(screenWidth),
+                  _buildEventHeader(screenWidth, event),
                   
                   SizedBox(height: screenHeight * 0.02),
                   
-                  // Participant Count
-                  _buildParticipantCount(screenWidth),
+                  // Event Status and Basic Info
+                  _buildEventStatusSection(screenWidth, event),
+                  
+                  SizedBox(height: screenHeight * 0.03),
+                  
+                  // Event Timing Details
+                  _buildTimingSection(screenWidth, event),
                   
                   SizedBox(height: screenHeight * 0.03),
                   
                   // About Event Section
-                  _buildAboutSection(screenWidth),
+                  _buildAboutSection(screenWidth, event),
                   
                   SizedBox(height: screenHeight * 0.03),
                   
-                  // Event Details (Location, Time)
-                  _buildEventDetails(screenWidth),
+                  // Organizer Information
+                  _buildOrganizerSection(screenWidth, event),
+                  
+                  SizedBox(height: screenHeight * 0.03),
+                  
+                  // Participant Statistics
+                  _buildParticipantStatsSection(screenWidth, event),
+                  
+                  SizedBox(height: screenHeight * 0.03),
+                  
+                  // Event Details (Location, Contact)
+                  _buildEventDetails(screenWidth, event),
+                  
+                  SizedBox(height: screenHeight * 0.03),
+                  
+                  // Tags Section
+                  if (event['tags'] != null && (event['tags'] as List).isNotEmpty)
+                    _buildTagsSection(screenWidth, event),
                   
                   SizedBox(height: screenHeight * 0.03),
                   
                   // Event Images Section
-                  _buildEventImagesSection(screenWidth, screenHeight),
+                  _buildEventImagesSection(screenWidth, screenHeight, event),
+                  
+                  // Videos Section (if available)
+                  if (event['videos'] != null && (event['videos'] as List).isNotEmpty) ...[
+                    SizedBox(height: screenHeight * 0.03),
+                    _buildVideosSection(screenWidth, event),
+                  ],
+                  
+                  // Resources Section (if available)
+                  if (event['resources'] != null && (event['resources'] as List).isNotEmpty) ...[
+                    SizedBox(height: screenHeight * 0.03),
+                    _buildResourcesSection(screenWidth, event),
+                  ],
                   
                   SizedBox(height: screenHeight * 0.03),
                   
-                  // Participant Engagement Section
-                  _buildParticipantEngagementSection(screenWidth, screenHeight),
+                  // Meeting Link Section (if available)
+                  if (event['meetingLink'] != null && event['meetingLink'].toString().isNotEmpty) ...[
+                    _buildMeetingLinkSection(screenWidth, event),
+                    SizedBox(height: screenHeight * 0.03),
+                  ],
                   
-                  SizedBox(height: screenHeight * 0.03),
+                  // Event Metadata
+                  _buildMetadataSection(screenWidth, event),
                   
-                  // Location Map Section
-                  _buildLocationMapSection(screenWidth, screenHeight),
+                  SizedBox(height: screenHeight * 0.05),
                 ],
               ),
             ),
@@ -92,7 +305,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     );
   }
 
-  Widget _buildEventMainImage(double screenWidth, double screenHeight) {
+  Widget _buildEventMainImage(double screenWidth, double screenHeight, Map<String, dynamic> event) {
     return Container(
       width: double.infinity,
       height: screenHeight * 0.3,
@@ -102,14 +315,14 @@ class _EventDetailPageState extends State<EventDetailPage> {
           bottomRight: Radius.circular(24),
         ),
         image: DecorationImage(
-          image: NetworkImage(widget.event['image'] ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600'),
+          image: NetworkImage(event['image'] ?? 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600'),
           fit: BoxFit.cover,
         ),
       ),
     );
   }
 
-  Widget _buildEventHeader(double screenWidth) {
+  Widget _buildEventHeader(double screenWidth, Map<String, dynamic> event) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +332,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.event['title'] ?? 'Event Title',
+                event['title'] ?? 'Event Title',
                 style: GoogleFonts.poppins(
                   fontSize: _getResponsiveFontSize(screenWidth, 24, 20, 18),
                   fontWeight: FontWeight.bold,
@@ -128,7 +341,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                widget.event['location'] ?? 'Event Location',
+                event['location'] ?? 'Event Location',
                 style: GoogleFonts.poppins(
                   fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
                   color: Colors.grey[600],
@@ -147,7 +360,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Start: ${widget.event['startTime'] ?? '9:00 AM'}',
+                'Start: ${event['startTime'] ?? '9:00 AM'}',
                 style: GoogleFonts.poppins(
                   fontSize: _getResponsiveFontSize(screenWidth, 12, 10, 8),
                   fontWeight: FontWeight.w500,
@@ -163,7 +376,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'End: ${widget.event['endTime'] ?? '11:00 AM'}',
+                'End: ${event['endTime'] ?? '11:00 AM'}',
                 style: GoogleFonts.poppins(
                   fontSize: _getResponsiveFontSize(screenWidth, 12, 10, 8),
                   fontWeight: FontWeight.w500,
@@ -177,43 +390,506 @@ class _EventDetailPageState extends State<EventDetailPage> {
     );
   }
 
-  Widget _buildParticipantCount(double screenWidth) {
-    return Row(
-      children: [
-        Icon(
-          Icons.people,
-          color: Colors.grey[600],
-          size: _getResponsiveSize(screenWidth, 20, 18, 16),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '${widget.event['attendees'] ?? '250'} people',
-          style: GoogleFonts.poppins(
-            fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
+  Widget _buildEventStatusSection(double screenWidth, Map<String, dynamic> event) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Event Status',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Icon(
-          Icons.access_time,
-          color: Colors.grey[600],
-          size: _getResponsiveSize(screenWidth, 20, 18, 16),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          widget.event['time'] ?? '7:00 PM - 11:00 PM',
-          style: GoogleFonts.poppins(
-            fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: (event['isActive'] == true) ? Colors.green[100] : Colors.red[100],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      (event['isActive'] == true) ? Icons.check_circle : Icons.cancel,
+                      size: 16,
+                      color: (event['isActive'] == true) ? Colors.green[700] : Colors.red[700],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      (event['isActive'] == true) ? 'Active' : 'Inactive',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: (event['isActive'] == true) ? Colors.green[700] : Colors.red[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue[100],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${event['eventType']?.toString().toUpperCase() ?? 'OFFLINE'}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.blue[700],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.purple[100],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${event['category']?.toString().toUpperCase() ?? 'OTHER'}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.purple[700],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildAboutSection(double screenWidth) {
+  Widget _buildTimingSection(double screenWidth, Map<String, dynamic> event) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Event Timing',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildTimingRow('Start Date', event['startDateFormatted'] ?? 'TBD', Icons.calendar_today),
+          if (event['endDateFormatted'] != null && event['endDateFormatted'] != 'TBD')
+            _buildTimingRow('End Date', event['endDateFormatted'], Icons.calendar_today),
+          _buildTimingRow('Start Time', event['startTime'] ?? 'TBD', Icons.access_time),
+          _buildTimingRow('End Time', event['endTime'] ?? 'TBD', Icons.access_time),
+          if (event['registrationDeadlineFormatted'] != null && event['registrationDeadlineFormatted'] != 'TBD')
+            _buildTimingRow('Registration Deadline', event['registrationDeadlineFormatted'], Icons.schedule),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimingRow(String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.blue[600]),
+          const SizedBox(width: 8),
+          Text(
+            '$label: ',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[700],
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrganizerSection(double screenWidth, Map<String, dynamic> event) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Organizer Information',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.orange[200],
+                child: Icon(Icons.person, color: Colors.orange[700]),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event['organizerName'] ?? 'Unknown Organizer',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    if (event['organizerEmail'] != null)
+                      Text(
+                        event['organizerEmail'],
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParticipantStatsSection(double screenWidth, Map<String, dynamic> event) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Participant Statistics',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard('Total Enrollments', '${event['totalEnrollments'] ?? 0}', Colors.green),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildStatCard('Approved', '${event['approvedParticipants'] ?? 0}', Colors.blue),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard('Pending', '${event['pendingRequests'] ?? 0}', Colors.orange),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildStatCard('Available Spots', '${event['availableSpots'] ?? 0}', Colors.purple),
+              ),
+            ],
+          ),
+          if (event['maxParticipants'] != null && event['maxParticipants'] > 0) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Capacity: ${event['currentAttendees'] ?? 0} / ${event['maxParticipants']}',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: (event['currentAttendees'] ?? 0) / event['maxParticipants'],
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, MaterialColor color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color[700],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: color[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagsSection(double screenWidth, Map<String, dynamic> event) {
+    final tags = event['tags'] as List? ?? [];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.indigo[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.indigo[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tags',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: tags.map((tag) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.indigo[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                tag.toString(),
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.indigo[700],
+                ),
+              ),
+            )).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResourcesSection(double screenWidth, Map<String, dynamic> event) {
+    final resources = event['resources'] as List? ?? [];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.teal[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.teal[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Resources',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...resources.map((resource) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Icon(Icons.link, size: 16, color: Colors.teal[600]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    resource.toString(),
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMeetingLinkSection(double screenWidth, Map<String, dynamic> event) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.cyan[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.cyan[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Meeting Link',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.video_call, color: Colors.cyan[600]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  event['meetingLink'].toString(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.cyan[700],
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  // TODO: Launch URL
+                },
+                icon: Icon(Icons.open_in_new, color: Colors.cyan[600]),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataSection(double screenWidth, Map<String, dynamic> event) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Event Metadata',
+            style: GoogleFonts.poppins(
+              fontSize: _getResponsiveFontSize(screenWidth, 18, 16, 14),
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildMetadataRow('Event ID', event['id'] ?? 'N/A'),
+          _buildMetadataRow('Slug', event['slug'] ?? 'N/A'),
+          _buildMetadataRow('Created', event['createdAtFormatted'] ?? 'N/A'),
+          _buildMetadataRow('Last Updated', event['updatedAtFormatted'] ?? 'N/A'),
+          if (event['venue'] != null)
+            _buildMetadataRow('Venue', event['venue']),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildAboutSection(double screenWidth, Map<String, dynamic> event) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -227,7 +903,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          widget.event['description'] ?? 
+          event['description'] ?? 
           'Planning an event can be a daunting task. Especially when you\'re not sure where to start. This comprehensive guide will help you plan and execute a successful event from start to finish.',
           style: GoogleFonts.poppins(
             fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
@@ -239,54 +915,54 @@ class _EventDetailPageState extends State<EventDetailPage> {
     );
   }
 
-  Widget _buildEventDetails(double screenWidth) {
+  Widget _buildEventDetails(double screenWidth, Map<String, dynamic> event) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Participants Row
-        Row(
-          children: [
-            // Profile images
-            SizedBox(
-              width: 80,
-              height: 30,
-              child: Stack(
-                children: [
-                  Positioned(
-                    left: 0,
-                    child: CircleAvatar(
-                      radius: 15,
-                      backgroundImage: NetworkImage('https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100'),
-                    ),
-                  ),
-                  Positioned(
-                    left: 20,
-                    child: CircleAvatar(
-                      radius: 15,
-                      backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'),
-                    ),
-                  ),
-                  Positioned(
-                    left: 40,
-                    child: CircleAvatar(
-                      radius: 15,
-                      backgroundImage: NetworkImage('https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              '+20 Participants',
-              style: GoogleFonts.poppins(
-                fontSize: _getResponsiveFontSize(screenWidth, 12, 10, 8),
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
+        // Row(
+        //   children: [
+        //     // Profile images
+        //     SizedBox(
+        //       width: 80,
+        //       height: 30,
+        //       child: Stack(
+        //         children: [
+        //           Positioned(
+        //             left: 0,
+        //             child: CircleAvatar(
+        //               radius: 15,
+        //               backgroundImage: NetworkImage('https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100'),
+        //             ),
+        //           ),
+        //           Positioned(
+        //             left: 20,
+        //             child: CircleAvatar(
+        //               radius: 15,
+        //               backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'),
+        //             ),
+        //           ),
+        //           Positioned(
+        //             left: 40,
+        //             child: CircleAvatar(
+        //               radius: 15,
+        //               backgroundImage: NetworkImage('https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100'),
+        //             ),
+        //           ),
+        //         ],
+        //       ),
+        //     ),
+        //     const SizedBox(width: 12),
+        //     // Text(
+        //     //   '+20 Participants',
+        //     //   style: GoogleFonts.poppins(
+        //     //     fontSize: _getResponsiveFontSize(screenWidth, 12, 10, 8),
+        //     //     color: Colors.grey[600],
+        //     //   ),
+        //     // ),
+        //   ],
+        // ),
+        // const SizedBox(height: 16),
         
         // Location
         Text(
@@ -307,7 +983,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
             ),
             const SizedBox(width: 8),
             Text(
-              widget.event['location'] ?? 'California, USA',
+              event['location'] ?? 'California, USA',
               style: GoogleFonts.poppins(
                 fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
                 color: Colors.grey[700],
@@ -319,7 +995,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     );
   }
 
-  Widget _buildEventImagesSection(double screenWidth, double screenHeight) {
+  Widget _buildEventImagesSection(double screenWidth, double screenHeight, Map<String, dynamic> event) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -338,100 +1014,148 @@ class _EventDetailPageState extends State<EventDetailPage> {
         ),
         const SizedBox(height: 16),
         
-        // Category filter buttons
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _imageCategories.length,
-            itemBuilder: (context, index) {
-              final isSelected = _selectedImageCategory == index;
-              return GestureDetector(
-                onTap: () {
-                  if (index == 1) {
-                    // Show certificate dialog or navigate to certificate page
-                    _showCertificateDialog(context);
-                  } else {
-                    setState(() {
-                      _selectedImageCategory = index;
-                    });
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF8B5CF6) : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(20),
-                    border: isSelected ? null : Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (index == 1) // Certificate
-                        Icon(
-                          Icons.workspace_premium,
-                          size: 16,
-                          color: isSelected ? Colors.white : Colors.grey[600],
-                        )
-                      else if (index == 2) // Behind Scene
-                        Icon(
-                          Icons.camera_alt,
-                          size: 16,
-                          color: isSelected ? Colors.white : Colors.grey[600],
-                        )
-                      else // All
-                        Icon(
-                          Icons.apps,
-                          size: 16,
-                          color: isSelected ? Colors.white : Colors.grey[600],
+        
+        // Images display
+        eventImages.isNotEmpty
+            ? SizedBox(
+                height: 140,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: eventImages.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      width: 180,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          eventImages[index],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: const Center(
+                                child: Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.grey[100],
+                              child: const Center(
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          },
                         ),
-                      const SizedBox(width: 8),
+                      ),
+                    );
+                  },
+                ),
+              )
+            : Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.image_not_supported, size: 40, color: Colors.grey[400]),
+                      const SizedBox(height: 8),
                       Text(
-                        _imageCategories[index],
+                        'No images available',
                         style: GoogleFonts.poppins(
-                          fontSize: _getResponsiveFontSize(screenWidth, 12, 10, 8),
-                          fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.white : Colors.grey[600],
+                          fontSize: 14,
+                          color: Colors.grey[500],
                         ),
                       ),
                     ],
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+      ],
+    );
+  }
+
+  Widget _buildVideosSection(double screenWidth, Map<String, dynamic> event) {
+    final videos = event['videos'] as List<String>? ?? [];
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.videocam,
+              color: const Color(0xFF8B5CF6),
+              size: _getResponsiveSize(screenWidth, 20, 18, 16),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Event Videos (${videos.length})',
+              style: GoogleFonts.poppins(
+                fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
         ),
-        
         const SizedBox(height: 16),
         
-        // Images slider
-        SizedBox(
-          height: 140,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _eventImages.length,
-            itemBuilder: (context, index) {
-              return Container(
-                width: 180,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  image: DecorationImage(
-                    image: NetworkImage(_eventImages[index]),
-                    fit: BoxFit.cover,
+        // Videos list
+        Column(
+          children: videos.map((videoUrl) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.play_circle_fill,
+                    color: Colors.blue[600],
+                    size: 24,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      videoUrl.isNotEmpty ? videoUrl.split('/').last : 'Video ${videos.indexOf(videoUrl) + 1}',
+                      style: GoogleFonts.poppins(
+                        fontSize: _getResponsiveFontSize(screenWidth, 14, 12, 10),
+                        fontWeight: FontWeight.w500,
+                        color: Colors.blue[700],
+                      ),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                  Icon(
+                    Icons.open_in_new,
+                    color: Colors.blue[500],
+                    size: 20,
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -993,7 +1717,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            widget.event['title'] ?? 'Tech Conference 2024',
+                            currentEvent['title'] ?? 'Tech Conference 2024',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,

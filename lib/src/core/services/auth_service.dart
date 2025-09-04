@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
 import '../models/user_model.dart';
@@ -62,6 +64,30 @@ class AuthService {
     } catch (e) {
       print('🚨 Error in verifyOtp: ${e.toString()}');
       throw Exception('An unexpected error occurred: ${e.toString()}');
+    }
+  }
+
+  // Get dashboard statistics
+  Future<Map<String, dynamic>> getDashboardStats() async {
+    try {
+      final response = await _apiClient.get('/events/dashboard');
+      print('📡 Dashboard API Response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('📊 Dashboard data: $data');
+        
+        if (data != null && data['success'] == true && data['summary'] != null) {
+          return data['summary'] as Map<String, dynamic>;
+        } else {
+          throw Exception('Invalid dashboard response structure: $data');
+        }
+      } else {
+        throw Exception('Dashboard API returned status ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('🚨 Error in getDashboardStats: ${e.toString()}');
+      throw Exception('Failed to load dashboard stats: ${e.toString()}');
     }
   }
 
@@ -137,20 +163,59 @@ class AuthService {
     }
   }
 
-  // Upload profile image (web-compatible)
-  Future<String> uploadProfileImage(String imagePath) async {
+  // Upload profile image with bytes (web-compatible)
+  Future<String> uploadProfileImageBytes(Uint8List imageBytes, String fileName) async {
     try {
-      // For web platform, we'll use base64 encoding
-      // In a real app, you'd implement proper file upload
-      print('📤 Image upload requested for: $imagePath');
+      print('📤 Uploading profile image: $fileName');
       
-      // For now, return a placeholder URL since web doesn't support file system access
-      // In production, implement proper web file upload with FormData
-      throw Exception('Image upload not available in web environment. Please implement web-compatible upload.');
+      final baseUrl = ApiClient.baseUrl;
+      final token = await _apiClient.getAccessToken();
+      
+      if (token == null) {
+        throw Exception('No access token available');
+      }
+      
+      final uri = Uri.parse('$baseUrl/uploads/profile');
+      final request = http.MultipartRequest('POST', uri);
+      
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+      
+      // Add the image file
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'avatar',
+          imageBytes,
+          filename: fileName,
+        ),
+      );
+      
+      print('📡 Sending multipart request to: $uri');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      print('📡 Upload API Response: ${response.statusCode} - ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['avatarUrl'] != null) {
+          print('✅ Image uploaded successfully: ${data['avatarUrl']}');
+          return data['avatarUrl'];
+        } else {
+          throw Exception('Upload failed: ${data['message'] ?? 'Unknown error'}');
+        }
+      } else {
+        throw Exception('Upload failed with status ${response.statusCode}: ${response.body}');
+      }
     } catch (e) {
-      print('🚨 Error in uploadProfileImage: ${e.toString()}');
-      throw Exception('Image upload not supported in web environment');
+      print('🚨 Error in uploadProfileImageBytes: ${e.toString()}');
+      throw Exception('Failed to upload image: ${e.toString()}');
     }
+  }
+
+  // Legacy method for backward compatibility
+  Future<String> uploadProfileImage(String imagePath) async {
+    throw Exception('Use uploadProfileImageBytes for web compatibility');
   }
 
   // Logout

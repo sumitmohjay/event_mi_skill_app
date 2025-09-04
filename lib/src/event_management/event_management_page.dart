@@ -552,7 +552,6 @@ class _EventManagementPageState extends State<EventManagementPage> {
   }
 
   Widget _buildEventCard(Event event, EventProvider eventProvider) {
-    final isUpcoming = event.dateTime?.isAfter(DateTime.now()) ?? false;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -655,21 +654,6 @@ class _EventManagementPageState extends State<EventManagementPage> {
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: isUpcoming ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      isUpcoming ? 'Upcoming' : 'Past',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: isUpcoming ? Colors.green : Colors.grey,
-                      ),
                     ),
                   ),
                 ],

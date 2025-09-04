@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'group_detail_page.dart';
+import 'provider/group_provider.dart';
 
 class GroupPage extends StatefulWidget {
   const GroupPage({super.key});
@@ -15,75 +17,13 @@ class _GroupPageState extends State<GroupPage> {
   final TextEditingController _groupDescriptionController = TextEditingController();
   String _selectedCategory = 'Technology';
 
-  // Mock group data
-  final List<Map<String, dynamic>> _groups = [
-    {
-      'id': '1',
-      'name': 'Flutter Developers',
-      'description': 'A community for Flutter enthusiasts',
-      'memberCount': 245,
-      'image': 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=200&fit=crop',
-      'category': 'Technology',
-      'isJoined': true,
-      'lastActivity': '2 hours ago',
-      'unreadCount': 5,
-    },
-    {
-      'id': '2',
-      'name': 'UI/UX Designers',
-      'description': 'Share design ideas and get feedback',
-      'memberCount': 189,
-      'image': 'https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=400&h=200&fit=crop',
-      'category': 'Design',
-      'isJoined': true,
-      'lastActivity': '1 day ago',
-      'unreadCount': 12,
-    },
-    {
-      'id': '3',
-      'name': 'Mobile Development',
-      'description': 'iOS and Android development discussions',
-      'memberCount': 312,
-      'image': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=200&fit=crop',
-      'category': 'Technology',
-      'isJoined': false,
-      'lastActivity': '3 hours ago',
-      'unreadCount': 0,
-    },
-    {
-      'id': '4',
-      'name': 'Project Management',
-      'description': 'Best practices and tools for project management',
-      'memberCount': 156,
-      'image': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=200&fit=crop',
-      'category': 'Business',
-      'isJoined': true,
-      'lastActivity': '5 hours ago',
-      'unreadCount': 3,
-    },
-    {
-      'id': '5',
-      'name': 'Data Science',
-      'description': 'Machine learning and data analysis',
-      'memberCount': 278,
-      'image': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop',
-      'category': 'Technology',
-      'isJoined': false,
-      'lastActivity': '1 day ago',
-      'unreadCount': 0,
-    },
-    {
-      'id': '6',
-      'name': 'Digital Marketing',
-      'description': 'Marketing strategies and trends',
-      'memberCount': 203,
-      'image': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop',
-      'category': 'Marketing',
-      'isJoined': true,
-      'lastActivity': '30 minutes ago',
-      'unreadCount': 8,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<GroupProvider>().loadMyGroups();
+    });
+  }
 
 
   @override
@@ -133,14 +73,61 @@ class _GroupPageState extends State<GroupPage> {
           ),
           // Groups content
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildGroupsList(),
-                ],
-              ),
+            child: Consumer<GroupProvider>(
+              builder: (context, groupProvider, child) {
+                if (groupProvider.isLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+                
+                if (groupProvider.errorMessage != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 60,
+                          color: Colors.red[300],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading groups',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          groupProvider.errorMessage!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => groupProvider.loadMyGroups(),
+                          child: Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildGroupsList(groupProvider.groups),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -162,9 +149,7 @@ class _GroupPageState extends State<GroupPage> {
 
 
 
-  Widget _buildGroupsList() {
-    final groups = _groups;
-
+  Widget _buildGroupsList(List<Map<String, dynamic>> groups) {
     if (groups.isEmpty) {
       return Center(
         child: Column(
@@ -181,7 +166,7 @@ class _GroupPageState extends State<GroupPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Try searching with different keywords',
+              'Join or create your first group',
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 color: Colors.grey[400],
@@ -196,7 +181,7 @@ class _GroupPageState extends State<GroupPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Groups (${groups.length})',
+          'My Groups (${groups.length})',
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -216,8 +201,10 @@ class _GroupPageState extends State<GroupPage> {
   }
 
   Widget _buildGroupCard(Map<String, dynamic> group) {
-    final isJoined = group['isJoined'];
-    final hasUnread = group['unreadCount'] > 0;
+    final groupProvider = context.read<GroupProvider>();
+    final memberCount = groupProvider.getMemberCount(group);
+    final adminName = groupProvider.getAdminName(group);
+    final groupImage = groupProvider.getGroupImage(group);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -251,7 +238,7 @@ class _GroupPageState extends State<GroupPage> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    group['image'],
+                    groupImage,
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
@@ -273,38 +260,18 @@ class _GroupPageState extends State<GroupPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              group['name'],
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          if (hasUnread)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                group['unreadCount'].toString(),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                        ],
+                      Text(
+                        group['name'] ?? 'Unknown Group',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        group['description'],
+                        group['description'] ?? 'No description available',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -318,40 +285,28 @@ class _GroupPageState extends State<GroupPage> {
                           Icon(Icons.people, size: 14, color: Colors.grey[500]),
                           const SizedBox(width: 4),
                           Text(
-                            '${group['memberCount']} members',
+                            '$memberCount members',
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               color: Colors.grey[500],
                             ),
                           ),
                           const SizedBox(width: 15),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isJoined ? Colors.green.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                          Icon(Icons.admin_panel_settings, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Expanded(
                             child: Text(
-                              isJoined ? 'Joined' : 'Join',
+                              adminName,
                               style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: isJoined ? Colors.green : Colors.blue,
+                                fontSize: 11,
+                                color: Colors.grey[500],
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      if (isJoined) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Last activity: ${group['lastActivity']}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -579,71 +534,105 @@ class _GroupPageState extends State<GroupPage> {
     );
   }
 
-  void _createGroup() {
+  Future<void> _createGroup() async {
     // Validate required fields
-    if (_groupNameController.text.trim().isEmpty || _groupDescriptionController.text.trim().isEmpty) {
+    if (_groupNameController.text.trim().isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please fill in all required fields',
-            style: GoogleFonts.poppins(),
-          ),
+        const SnackBar(
+          content: Text('Please enter a group name'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // Generate random image for the new group
-    final List<String> groupImages = [
-      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=200&fit=crop',
-      'https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=400&h=200&fit=crop',
-      'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=200&fit=crop',
-      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=200&fit=crop',
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop',
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop',
-    ];
-
-    // Create new group
-    final newGroup = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'name': _groupNameController.text.trim(),
-      'description': _groupDescriptionController.text.trim(),
-      'memberCount': 1, // Creator is the first member
-      'image': groupImages[DateTime.now().millisecond % groupImages.length],
-      'category': _selectedCategory,
-      'isJoined': true, // Creator automatically joins
-      'lastActivity': 'Just created',
-      'unreadCount': 0,
-    };
-
-    setState(() {
-      _groups.insert(0, newGroup); // Add to the beginning of the list
-    });
-
-    Navigator.pop(context);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Group "${newGroup['name']}" created successfully!',
-          style: GoogleFonts.poppins(),
+    if (_groupDescriptionController.text.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a group description'),
+          backgroundColor: Colors.red,
         ),
-        backgroundColor: Colors.green,
-        action: SnackBarAction(
-          label: 'View',
-          textColor: Colors.white,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => GroupDetailPage(group: newGroup),
-              ),
-            );
-          },
+      );
+      return;
+    }
+
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
         ),
-      ),
-    );
+      );
+
+      // Get group provider
+      final groupProvider = context.read<GroupProvider>();
+      
+      // Create group data
+      final groupData = {
+        'name': _groupNameController.text.trim(),
+        'description': _groupDescriptionController.text.trim(),
+        'category': _selectedCategory,
+        'isPublic': true, // Default to public group
+      };
+
+      // Call API to create group
+      final createdGroup = await groupProvider.createGroup(groupData);
+
+      // Close loading dialog
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      // Close create group dialog
+      Navigator.pop(context);
+
+      // Show success message
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Group "${createdGroup['name']}" created successfully!',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.green,
+          action: SnackBarAction(
+            label: 'View',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => GroupDetailPage(group: createdGroup),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      // Refresh groups list
+      if (mounted) {
+        await groupProvider.loadMyGroups();
+      }
+    } catch (e) {
+      // Close loading dialog if still mounted
+      if (mounted) {
+        Navigator.pop(context);
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to create group: ${e.toString()}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override

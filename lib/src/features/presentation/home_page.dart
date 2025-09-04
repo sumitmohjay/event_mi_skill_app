@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'event_detail_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'event_page.dart';
+import '../../event_management/services/event_service.dart';
+import '../../event_management/models/dashboard_response.dart';
+import '../../core/api/api_client.dart';
+import '../../core/providers/dashboard_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,107 +17,229 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedCategory = 0;
-  final List<String> _categories = ['All', 'Academic', 'Cultural', 'Technical'];
   
-  // Filtered events based on selected category
-  List<Map<String, dynamic>> get _filteredTodayEvents {
-    if (_selectedCategory == 0) return _todayEvents; // All
-    final categoryName = _categories[_selectedCategory];
-    return _todayEvents.where((event) => event['category'] == categoryName).toList();
+  // API integration
+  EventService? _eventService;
+  bool _isLoading = true;
+  String? _errorMessage;
+  
+  // Dynamic data from API
+  List<Map<String, dynamic>> _todayEvents = [];
+  List<Map<String, dynamic>> _upcomingEvents = [];
+  List<Map<String, dynamic>> _pastEvents = [];
+  EventSummary? _summary;
+  
+  
+  @override
+  void initState() {
+    super.initState();
+    _initializeEventService();
   }
-  
-  List<Map<String, dynamic>> get _filteredUpcomingEvents {
-    if (_selectedCategory == 0) return _upcomingEvents; // All
-    final categoryName = _categories[_selectedCategory];
-    return _upcomingEvents.where((event) => event['category'] == categoryName).toList();
+
+  Future<void> _initializeEventService() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final apiClient = ApiClient(prefs);
+      _eventService = EventService(apiClient);
+      await _loadEvents();
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to initialize: $e';
+        _isLoading = false;
+      });
+    }
   }
-  
-  final List<Map<String, dynamic>> _todayEvents = [
-    {
-      'title': 'Tech Conference 2024',
-      'time': '9:00 AM - 11:00 AM',
-      'location': 'Los Angeles',
-      'attendees': 120,
-      'category': 'Technical',
-      'color': const Color(0xFF6C5CE7),
-    },
-    {
-      'title': 'Cultural Festival',
-      'time': '2:00 PM - 6:00 PM',
-      'location': 'New York',
-      'attendees': 85,
-      'category': 'Cultural',
-      'color': const Color(0xFFE17055),
-    },
-    {
-      'title': 'Academic Seminar',
-      'time': '10:00 AM - 12:00 PM',
-      'location': 'Boston',
-      'attendees': 65,
-      'category': 'Academic',
-      'color': const Color(0xFF00B894),
-    },
-  ];
 
-  final List<Map<String, dynamic>> _upcomingEvents = [
-    {
-      'title': 'AI Workshop',
-      'date': '25 AUG',
-      'time': '2:00 PM - 6:00 PM',
-      'attendees': 95,
-      'category': 'Technical',
-    },
-    {
-      'title': 'Art Exhibition',
-      'date': '26 AUG',
-      'time': '6:00 PM - 11:00 PM',
-      'attendees': 150,
-      'category': 'Cultural',
-    },
-  ];
+  Future<void> _loadEvents() async {
+    if (_eventService == null) return;
+    
+    final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
+    
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    dashboardProvider.setLoading(true);
 
-  final List<Map<String, dynamic>> _pastEvents = [
-    {
-      'title': 'Digital Marketing Course',
-      'date': '20 AUG',
-      'time': '10:00 AM - 4:00 PM',
-      'attendees': 85,
-      'category': 'Academic',
-      'image': 'https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=400&h=200&fit=crop',
-    },
-    {
-      'title': 'Web Development Bootcamp',
-      'date': '18 AUG',
-      'time': '9:00 AM - 6:00 PM',
-      'attendees': 120,
-      'category': 'Technical',
-      'image': 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=200&fit=crop',
-    },
-    {
-      'title': 'Photography Workshop',
-      'date': '15 AUG',
-      'time': '2:00 PM - 5:00 PM',
-      'attendees': 45,
-      'category': 'Cultural',
-      'image': 'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=400&h=200&fit=crop',
-    },
-    {
-      'title': 'Business Analytics Course',
-      'date': '12 AUG',
-      'time': '11:00 AM - 3:00 PM',
-      'attendees': 75,
-      'category': 'Academic',
-      'image': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=200&fit=crop',
-    },
-  ];
+    try {
+      final events = await _eventService!.getFormattedEvents();
+      final summary = await _eventService!.getSummary();
+      
+      final todayEvents = events['today'] ?? [];
+      final upcomingEvents = events['upcoming'] ?? [];
+      final pastEvents = events['past'] ?? [];
+      
+      setState(() {
+        _todayEvents = todayEvents;
+        _upcomingEvents = upcomingEvents;
+        _pastEvents = pastEvents;
+        _summary = summary;
+        _isLoading = false;
+      });
+      
+      // Update the provider with the dashboard data
+      dashboardProvider.updateDashboardData(
+        summary: summary,
+        todayEvents: todayEvents,
+        upcomingEvents: upcomingEvents,
+        pastEvents: pastEvents,
+      );
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load events: $e';
+        _isLoading = false;
+      });
+      dashboardProvider.setError('Failed to load events: $e');
+    }
+  }
+
+  Future<void> _refreshEvents() async {
+    await _loadEvents();
+  }
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: _buildResponsiveContent(),
+      body: _isLoading 
+        ? _buildLoadingState()
+        : _errorMessage != null 
+          ? _buildErrorState()
+          : RefreshIndicator(
+              onRefresh: _refreshEvents,
+              child: _buildResponsiveContent(),
+            ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Loading events...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red.shade300,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Error loading events',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage ?? 'Unknown error',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadEvents,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Container(
+      height: 120,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.event_busy,
+              size: 32,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    if (_summary == null) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildSummaryItem('Today', _summary!.todayCount.toString()),
+          _buildSummaryItem('Upcoming', _summary!.upcomingCount.toString()),
+          _buildSummaryItem('Past', _summary!.pastCount.toString()),
+          _buildSummaryItem('Total', _summary!.totalActiveEvents.toString()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String count) {
+    return Column(
+      children: [
+        Text(
+          count,
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.9),
+          ),
+        ),
+      ],
     );
   }
 
@@ -132,7 +260,7 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-                _buildCategoryFilter(),
+                _buildSummaryCard(),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 _buildTodaySection(),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
@@ -289,61 +417,6 @@ class _HomePageState extends State<HomePage> {
   //   );
   // }
 
-  Widget _buildCategoryFilter() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final containerHeight = _getResponsiveSize(screenWidth, 55, 50, 45);
-    
-    return SizedBox(
-      width: screenWidth * 0.8,
-      height: containerHeight,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final isSelected = _selectedCategory == index;
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedCategory = index;
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: EdgeInsets.only(right: _getResponsiveSize(screenWidth, 16, 12, 8)),
-              padding: EdgeInsets.symmetric(
-                horizontal: _getResponsiveSize(screenWidth, 24, 20, 16), 
-                vertical: _getResponsiveSize(screenWidth, 14, 12, 10)
-              ),
-              decoration: BoxDecoration(
-                gradient: isSelected ? const LinearGradient(
-                  colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ) : null,
-                color: isSelected ? null : Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                _categories[index],
-                style: GoogleFonts.poppins(
-                  color: isSelected ? Colors.white : const Color(0xFF636E72),
-                  fontWeight: FontWeight.w500,
-                  fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   Widget _buildTodaySection() {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -365,43 +438,43 @@ class _HomePageState extends State<HomePage> {
                   color: const Color(0xFF2D3436),
                 ),
               ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on, 
-                    color: const Color(0xFF6C5CE7), 
-                    size: _getResponsiveSize(screenWidth, 18, 16, 14)
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Los Angeles',
-                    style: GoogleFonts.poppins(
-                      fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
-                      color: const Color(0xFF6C5CE7),
-                      fontWeight: FontWeight.w500,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EventPage(
+                        events: _todayEvents,
+                        eventType: 'Today',
+                      ),
                     ),
+                  );
+                },
+                child: Text(
+                  'View more',
+                  style: GoogleFonts.poppins(
+                    fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+                    color: const Color(0xFF6C5CE7),
+                    fontWeight: FontWeight.w500,
                   ),
-                  Icon(
-                    Icons.keyboard_arrow_right, 
-                    color: const Color(0xFF6C5CE7), 
-                    size: _getResponsiveSize(screenWidth, 18, 16, 14)
-                  ),
-                ],
+                ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: cardHeight,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _filteredTodayEvents.length,
-              itemBuilder: (context, index) {
-                final event = _filteredTodayEvents[index];
-                return _buildTodayEventCard(event);
-              },
-            ),
-          ),
+          _todayEvents.isEmpty
+            ? _buildEmptyState('No events today')
+            : SizedBox(
+                height: cardHeight,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _todayEvents.length,
+                  itemBuilder: (context, index) {
+                    final event = _todayEvents[index];
+                    return _buildTodayEventCard(event);
+                  },
+                ),
+              ),
         ],
       ),
     );
@@ -413,12 +486,8 @@ class _HomePageState extends State<HomePage> {
     
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EventDetailPage(event: event),
-          ),
-        );
+        // TODO: Navigate to event detail page
+        // Navigator functionality removed
       },
       child: Container(
         width: cardWidth,
@@ -559,28 +628,43 @@ class _HomePageState extends State<HomePage> {
                   color: const Color(0xFF2D3436),
                 ),
               ),
-              Text(
-                'View more',
-                style: GoogleFonts.poppins(
-                  fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
-                  color: const Color(0xFF6C5CE7),
-                  fontWeight: FontWeight.w500,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EventPage(
+                        events: _upcomingEvents,
+                        eventType: 'Upcoming',
+                      ),
+                    ),
+                  );
+                },
+                child: Text(
+                  'View more',
+                  style: GoogleFonts.poppins(
+                    fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+                    color: const Color(0xFF6C5CE7),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 120,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _filteredUpcomingEvents.length,
-              itemBuilder: (context, index) {
-                final event = _filteredUpcomingEvents[index];
-                return _buildUpcomingEventCard(event);
-              },
-            ),
-          ),
+          _upcomingEvents.isEmpty
+            ? _buildEmptyState('No upcoming events found')
+            : SizedBox(
+                height: 120,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _upcomingEvents.length,
+                  itemBuilder: (context, index) {
+                    final event = _upcomingEvents[index];
+                    return _buildUpcomingEventCard(event);
+                  },
+                ),
+              ),
         ],
       ),
     );
@@ -590,12 +674,8 @@ class _HomePageState extends State<HomePage> {
     final screenWidth = MediaQuery.of(context).size.width;
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EventDetailPage(event: event),
-          ),
-        );
+        // TODO: Navigate to event detail page
+        // Navigator functionality removed
       },
       child: Container(
         width: screenWidth * 0.7,
@@ -848,10 +928,8 @@ class _HomePageState extends State<HomePage> {
   Widget _buildPastEventsSection() {
     final screenWidth = MediaQuery.of(context).size.width;
     
-    // Filter past events based on selected category
-    final filteredPastEvents = _selectedCategory == 0 
-        ? _pastEvents 
-        : _pastEvents.where((event) => event['category'] == _categories[_selectedCategory]).toList();
+    // Use all past events without filtering
+    final pastEvents = _pastEvents;
     
     return SizedBox(
       width: screenWidth * 0.8,
@@ -869,32 +947,47 @@ class _HomePageState extends State<HomePage> {
                   color: const Color(0xFF2D3436),
                 ),
               ),
-              Text(
-                'View more',
-                style: GoogleFonts.poppins(
-                  fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
-                  color: const Color(0xFF8B5CF6),
-                  fontWeight: FontWeight.w500,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EventPage(
+                        events: _pastEvents,
+                        eventType: 'Past',
+                      ),
+                    ),
+                  );
+                },
+                child: Text(
+                  'View more',
+                  style: GoogleFonts.poppins(
+                    fontSize: _getResponsiveFontSize(screenWidth, 16, 14, 12),
+                    color: const Color(0xFF8B5CF6),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 180,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: filteredPastEvents.length,
-              itemBuilder: (context, index) {
-                final event = filteredPastEvents[index];
-                return Container(
-                  width: screenWidth * 0.7,
-                  margin: const EdgeInsets.only(right: 16),
-                  child: _buildPastEventCard(event),
-                );
-              },
-            ),
-          ),
+          pastEvents.isEmpty
+            ? _buildEmptyState('No past events found')
+            : SizedBox(
+                height: 180,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: pastEvents.length,
+                  itemBuilder: (context, index) {
+                    final event = pastEvents[index];
+                    return Container(
+                      width: screenWidth * 0.7,
+                      margin: const EdgeInsets.only(right: 16),
+                      child: _buildPastEventCard(event),
+                    );
+                  },
+                ),
+              ),
         ],
       ),
     );
@@ -905,12 +998,8 @@ class _HomePageState extends State<HomePage> {
     
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EventDetailPage(event: event),
-          ),
-        );
+        // TODO: Navigate to event detail page
+        // Navigator functionality removed
       },
       child: Container(
         decoration: BoxDecoration(

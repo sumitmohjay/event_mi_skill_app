@@ -109,6 +109,31 @@ class ApiClient {
     return response;
   }
 
+  // PATCH request
+  Future<http.Response> patch(String endpoint, {String? body}) async {
+    final token = await getAccessToken();
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+
+    print('🔑 Making PATCH request to: $baseUrl$endpoint');
+    if (token != null) {
+      print('🔑 Adding Bearer token');
+    }
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: headers,
+      body: body,
+    );
+
+    print('📊 Response status: ${response.statusCode}');
+    print('📄 Response body: ${response.body}');
+
+    return response;
+  }
+
   // DELETE request
   Future<http.Response> delete(String endpoint) async {
     final token = await getAccessToken();

@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../api/api_client.dart';
 import '../../event_management/event.dart';
 
@@ -32,11 +34,24 @@ class EventApiService {
     }
   }
 
-  /// Upload a file to the server
-  Future<String> uploadFile(String filePath) async {
+  /// Upload an image file to the server
+  Future<String> uploadImage(String filePath) async {
     try {
+      MultipartFile multipartFile;
+      
+      if (kIsWeb) {
+        // For web, fetch the blob and convert to bytes
+        final response = await http.get(Uri.parse(filePath));
+        final bytes = response.bodyBytes;
+        final fileName = 'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        multipartFile = MultipartFile.fromBytes(bytes, filename: fileName);
+      } else {
+        // For mobile/desktop, use file path
+        multipartFile = await MultipartFile.fromFile(filePath);
+      }
+      
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath),
+        'images': multipartFile,
       });
       
       // Get the access token
@@ -51,27 +66,173 @@ class EventApiService {
         },
       ));
       
-      print('📤 Uploading file: $filePath');
+      print('📤 Uploading image: $filePath');
       final response = await dio.post<Map<String, dynamic>>(
-        '/upload',
+        '/uploads/event/images',
         data: formData,
       );
       
-      print('📥 File upload response: ${response.statusCode} - ${response.data}');
+      print('📥 Image upload response: ${response.statusCode} - ${response.data}');
       
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data!;
-        if (data['success'] == true && data['url'] != null) {
-          return data['url'] as String;
-        } else {
-          throw Exception('Invalid response structure: $data');
+        if (data['success'] == true && data['data'] != null) {
+          final responseData = data['data'] as Map<String, dynamic>;
+          if (responseData['images'] != null && responseData['images'] is List) {
+            final images = responseData['images'] as List;
+            if (images.isNotEmpty && images[0]['url'] != null) {
+              return images[0]['url'] as String;
+            }
+          }
         }
+        throw Exception('Invalid response structure: $data');
       } else {
-        throw Exception('Failed to upload file: ${response.statusMessage}');
+        throw Exception('Failed to upload image: ${response.statusMessage}');
       }
     } catch (e) {
-      print('🚨 Error uploading file: $e');
+      print('🚨 Error uploading image: $e');
       rethrow;
+    }
+  }
+
+  /// Upload a video file to the server
+  Future<String> uploadVideo(String filePath) async {
+    try {
+      MultipartFile multipartFile;
+      
+      if (kIsWeb) {
+        // For web, fetch the blob and convert to bytes
+        final response = await http.get(Uri.parse(filePath));
+        final bytes = response.bodyBytes;
+        final fileName = 'video_${DateTime.now().millisecondsSinceEpoch}.mp4';
+        multipartFile = MultipartFile.fromBytes(bytes, filename: fileName);
+      } else {
+        // For mobile/desktop, use file path
+        multipartFile = await MultipartFile.fromFile(filePath);
+      }
+      
+      final formData = FormData.fromMap({
+        'videos': multipartFile,
+      });
+      
+      // Get the access token
+      final token = await _apiClient.getAccessToken();
+      
+      // Create a new Dio instance for file uploads with the base URL
+      final dio = Dio(BaseOptions(
+        baseUrl: 'https://lms-latest-dsrn.onrender.com/api',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ));
+      
+      print('📤 Uploading video: $filePath');
+      final response = await dio.post<Map<String, dynamic>>(
+        '/uploads/event/videos',
+        data: formData,
+      );
+      
+      print('📥 Video upload response: ${response.statusCode} - ${response.data}');
+      
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data!;
+        if (data['success'] == true && data['data'] != null) {
+          final responseData = data['data'] as Map<String, dynamic>;
+          if (responseData['videos'] != null && responseData['videos'] is List) {
+            final videos = responseData['videos'] as List;
+            if (videos.isNotEmpty && videos[0]['url'] != null) {
+              return videos[0]['url'] as String;
+            }
+          }
+        }
+        throw Exception('Invalid response structure: $data');
+      } else {
+        throw Exception('Failed to upload video: ${response.statusMessage}');
+      }
+    } catch (e) {
+      print('🚨 Error uploading video: $e');
+      rethrow;
+    }
+  }
+
+  /// Upload a file to the server (legacy method for backward compatibility)
+  Future<String> uploadFile(String filePath) async {
+    print('🔍 uploadFile called with: $filePath');
+    print('🌐 kIsWeb: $kIsWeb');
+    print('🔗 startsWith blob: ${filePath.startsWith('blob:')}');
+    
+    // Determine file type and use appropriate upload method
+    final lower = filePath.toLowerCase();
+    
+    // For web blob URLs, we need to check differently or default to image
+    if (kIsWeb && filePath.startsWith('blob:')) {
+      print('📸 Routing blob URL to uploadImage');
+      // For web blobs, default to image upload since we can't determine type from URL
+      return await uploadImage(filePath);
+    } else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || 
+        lower.endsWith('.png') || lower.endsWith('.gif')) {
+      print('📸 Routing image file to uploadImage');
+      return await uploadImage(filePath);
+    } else if (lower.endsWith('.mp4') || lower.endsWith('.mov') || 
+               lower.endsWith('.avi')) {
+      print('🎥 Routing video file to uploadVideo');
+      return await uploadVideo(filePath);
+    } else {
+      print('📄 Using generic upload for: $filePath');
+      // For other files, use generic upload
+      try {
+        MultipartFile multipartFile;
+        
+        if (kIsWeb) {
+          // For web, fetch the blob and convert to bytes
+          final response = await http.get(Uri.parse(filePath));
+          final bytes = response.bodyBytes;
+          final fileName = 'file_${DateTime.now().millisecondsSinceEpoch}';
+          multipartFile = MultipartFile.fromBytes(bytes, filename: fileName);
+        } else {
+          // For mobile/desktop, use file path
+          multipartFile = await MultipartFile.fromFile(filePath);
+        }
+        
+        final formData = FormData.fromMap({
+          'file': multipartFile,
+        });
+        
+        // Get the access token
+        final token = await _apiClient.getAccessToken();
+        
+        // Create a new Dio instance for file uploads with the base URL
+        final dio = Dio(BaseOptions(
+          baseUrl: 'https://lms-latest-dsrn.onrender.com/api',
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        ));
+        
+        print('📤 Uploading file: $filePath');
+        final response = await dio.post<Map<String, dynamic>>(
+          '/upload',
+          data: formData,
+        );
+        
+        print('📥 File upload response: ${response.statusCode} - ${response.data}');
+        
+        if (response.statusCode == 200 && response.data != null) {
+          final data = response.data!;
+          if (data['success'] == true && data['url'] != null) {
+            return data['url'] as String;
+          } else {
+            throw Exception('Invalid response structure: $data');
+          }
+        } else {
+          throw Exception('Failed to upload file: ${response.statusMessage}');
+        }
+      } catch (e) {
+        print('🚨 Error uploading file: $e');
+        rethrow;
+      }
     }
   }
 
@@ -112,12 +273,12 @@ class EventApiService {
   }) async {
     try {
       // Filter out non-local files (already uploaded URLs)
-      final localImages = images?.where((path) => !path.startsWith('http')).toList() ?? [];
-      final localVideos = videos?.where((path) => !path.startsWith('http')).toList() ?? [];
+      final localImages = images?.where((path) => !path.startsWith('http') && !path.startsWith('/uploads')).toList() ?? [];
+      final localVideos = videos?.where((path) => !path.startsWith('http') && !path.startsWith('/uploads')).toList() ?? [];
       
       // Get existing remote URLs
-      final existingImageUrls = images?.where((path) => path.startsWith('http')).toList() ?? [];
-      final existingVideoUrls = videos?.where((path) => path.startsWith('http')).toList() ?? [];
+      final existingImageUrls = images?.where((path) => path.startsWith('http') || path.startsWith('/uploads')).toList() ?? [];
+      final existingVideoUrls = videos?.where((path) => path.startsWith('http') || path.startsWith('/uploads')).toList() ?? [];
       
       // Upload new files
       final uploadedImageUrls = await uploadFiles(localImages);
@@ -191,12 +352,12 @@ class EventApiService {
   }) async {
     try {
       // Filter out non-local files (already uploaded URLs)
-      final localImages = images?.where((path) => !path.startsWith('http')).toList() ?? [];
-      final localVideos = videos?.where((path) => !path.startsWith('http')).toList() ?? [];
+      final localImages = images?.where((path) => !path.startsWith('http') && !path.startsWith('/uploads')).toList() ?? [];
+      final localVideos = videos?.where((path) => !path.startsWith('http') && !path.startsWith('/uploads')).toList() ?? [];
       
       // Get existing remote URLs
-      final existingImageUrls = images?.where((path) => path.startsWith('http')).toList() ?? [];
-      final existingVideoUrls = videos?.where((path) => path.startsWith('http')).toList() ?? [];
+      final existingImageUrls = images?.where((path) => path.startsWith('http') || path.startsWith('/uploads')).toList() ?? [];
+      final existingVideoUrls = videos?.where((path) => path.startsWith('http') || path.startsWith('/uploads')).toList() ?? [];
       
       // Upload new files
       final uploadedImageUrls = await uploadFiles(localImages);
@@ -227,7 +388,7 @@ class EventApiService {
       };
 
       print('📡 Updating event $eventId with data: $eventData');
-      final response = await _apiClient.put('/events/$eventId', eventData);
+      final response = await _apiClient.patch('/events/$eventId', body: jsonEncode(eventData));
       
       print('📡 Update Event API Response: ${response.statusCode} - ${response.body}');
 

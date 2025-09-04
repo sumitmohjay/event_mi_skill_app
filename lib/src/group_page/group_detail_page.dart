@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'provider/group_provider.dart';
 
 class GroupDetailPage extends StatefulWidget {
   final Map<String, dynamic> group;
@@ -13,65 +15,149 @@ class GroupDetailPage extends StatefulWidget {
 class _GroupDetailPageState extends State<GroupDetailPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
-  // Mock chat messages
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'id': '1',
-      'sender': 'John Doe',
-      'message': 'Hey everyone! Welcome to the group!',
-      'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
-      'isMe': false,
-      'avatar': 'JD',
-    },
-    {
-      'id': '2',
-      'sender': 'Jane Smith',
-      'message': 'Thanks for creating this group. Looking forward to great discussions!',
-      'timestamp': DateTime.now().subtract(const Duration(hours: 1, minutes: 45)),
-      'isMe': false,
-      'avatar': 'JS',
-    },
-    {
-      'id': '3',
-      'sender': 'You',
-      'message': 'Excited to be part of this community!',
-      'timestamp': DateTime.now().subtract(const Duration(hours: 1, minutes: 30)),
-      'isMe': true,
-      'avatar': 'ME',
-    },
-    {
-      'id': '4',
-      'sender': 'Mike Johnson',
-      'message': 'Does anyone have experience with the latest Flutter updates?',
-      'timestamp': DateTime.now().subtract(const Duration(minutes: 45)),
-      'isMe': false,
-      'avatar': 'MJ',
-    },
-    {
-      'id': '5',
-      'sender': 'Sarah Wilson',
-      'message': 'Yes! I\'ve been working with Flutter 3.0. Happy to share insights.',
-      'timestamp': DateTime.now().subtract(const Duration(minutes: 30)),
-      'isMe': false,
-      'avatar': 'SW',
-    },
-    {
-      'id': '6',
-      'sender': 'You',
-      'message': 'That would be great! Could you share some best practices?',
-      'timestamp': DateTime.now().subtract(const Duration(minutes: 15)),
-      'isMe': true,
-      'avatar': 'ME',
-    },
-  ];
+  
+  Map<String, dynamic>? _groupData;
+  List<Map<String, dynamic>> _messages = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
+    _loadGroupMessages();
+  }
+
+  Future<void> _loadGroupMessages() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    try {
+      final groupProvider = context.read<GroupProvider>();
+      final groupId = widget.group['_id']?.toString() ?? widget.group['id']?.toString();
+      
+      if (groupId == null) {
+        throw Exception('Group ID is null');
+      }
+
+      print('Loading messages for group: $groupId');
+      final response = await groupProvider.loadGroupMessages(groupId);
+      
+      if (response == null) {
+        throw Exception('No data returned from API');
+      }
+
+      print('Processing messages from API: $response');
+      
+      // Handle the API response structure
+      if (response['group'] == null || response['messages'] == null) {
+        throw Exception('Invalid API response format');
+      }
+
+      // Update group data
+      setState(() {
+        _groupData = Map<String, dynamic>.from(response['group']);
+      });
+
+      // Process messages
+      final messages = response['messages']?['items'] as List<dynamic>? ?? [];
+      print('Found ${messages.length} messages');
+      
+      if (mounted) {
+        setState(() {
+          _messages = _processMessages(messages);
+          _isLoading = false;
+        });
+        
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _scrollToBottom();
+        });
+      }
+    } catch (e, stackTrace) {
+      print('Error in _loadGroupMessages: $e');
+      print('Stack trace: $stackTrace');
+      
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error loading messages: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  List<Map<String, dynamic>> _processMessages(List<dynamic> apiMessages) {
+    try {
+      if (apiMessages.isEmpty) {
+        print('No messages to process');
+        return [];
+      }
+
+      print('Processing ${apiMessages.length} messages');
+      
+      return apiMessages.map((msg) {
+        if (msg == null) return null;
+        
+        try {
+          print('Processing message: $msg');
+          
+          // Extract sender information
+          final sender = msg['senderId'] is Map 
+              ? msg['senderId'] as Map<String, dynamic>
+              : {
+                  '_id': msg['senderId']?.toString() ?? 'unknown',
+                  'name': (msg['senderName']?.toString() ?? 'Unknown User').trim(),
+                  'avatar': (msg['senderId'] is Map && (msg['senderId'] as Map).containsKey('avatar'))
+                      ? (msg['senderId'] as Map)['avatar']
+                      : null,
+                };
+          
+          // Get message content, preferring decrypted content if available
+          final content = msg['decryptedContent']?.toString() ?? 
+                         msg['content']?.toString() ?? '';
+          
+          // Parse timestamp
+          final timestamp = msg['createdAt'] != null 
+              ? DateTime.tryParse(msg['createdAt'].toString()) ?? DateTime.now()
+              : DateTime.now();
+              
+          // Create message map
+          final message = {
+            'id': msg['_id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            'sender': sender['name']?.toString() ?? 'Unknown User',
+            'message': content,
+            'timestamp': timestamp,
+            'isMe': false, // TODO: Implement actual user check
+            'avatar': sender['avatar'] ?? _getAvatarInitials(sender['name']?.toString() ?? 'UU'),
+            'senderId': sender['_id']?.toString(),
+            'isSystemMessage': msg['isSystemMessage'] == true,
+            'isEdited': msg['isEdited'] == true,
+            'readCount': (msg['readCount'] is int) ? msg['readCount'] : 0,
+          };
+          
+          print('Processed message: $message');
+          return message;
+        } catch (e) {
+          print('Error processing message $msg: $e');
+          return null;
+        }
+      }).where((msg) => msg != null).cast<Map<String, dynamic>>().toList();
+    } catch (e) {
+      print('Error in _processMessages: $e');
+      return [];
+    }
+  }
+
+  String _getAvatarInitials(String name) {
+    if (name.isEmpty) return 'U';
+    final parts = name.split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
   }
 
   void _scrollToBottom() {
@@ -82,6 +168,99 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
         curve: Curves.easeOut,
       );
     }
+  }
+
+  int _getMemberCount() {
+    if (_groupData != null) {
+      final groupProvider = context.read<GroupProvider>();
+      return groupProvider.getMemberCount(_groupData!);
+    }
+    return widget.group['memberCount'] ?? 0;
+  }
+
+  Widget _buildMessagesList() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 60,
+              color: Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Error loading messages',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadGroupMessages,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_messages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.chat_bubble_outline,
+              size: 60,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No messages yet',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Be the first to send a message!',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[400],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: _messages.length,
+      itemBuilder: (context, index) {
+        return _buildMessageBubble(_messages[index]);
+      },
+    );
   }
 
   @override
@@ -99,23 +278,33 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: Image.network(
-                widget.group['image'],
-                width: 40,
-                height: 40,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
+              child: widget.group['image'] != null && widget.group['image'].toString().isNotEmpty
+                  ? Image.network(
+                      widget.group['image'].toString(),
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(Icons.group, color: Colors.white),
+                        );
+                      },
+                    )
+                  : Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(Icons.group, color: Colors.white),
                     ),
-                    child: const Icon(Icons.group, color: Colors.white),
-                  );
-                },
-              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -123,7 +312,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.group['name'],
+                    widget.group['name']?.toString() ?? 'Unknown Group',
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 16,
@@ -131,9 +320,9 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                     ),
                   ),
                   Text(
-                    '${widget.group['memberCount']} members',
+                    '${_getMemberCount()} members',
                     style: GoogleFonts.poppins(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
                     ),
                   ),
@@ -156,14 +345,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessageBubble(_messages[index]);
-              },
-            ),
+            child: _buildMessagesList(),
           ),
           _buildMessageInput(),
         ],
@@ -172,27 +354,56 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> message) {
-    final isMe = message['isMe'];
-    final timestamp = message['timestamp'] as DateTime;
+    final isMe = message['isMe'] ?? false;
+    final timestamp = message['timestamp'] is DateTime 
+        ? message['timestamp'] 
+        : DateTime.tryParse(message['timestamp'].toString()) ?? DateTime.now();
+    final isSystem = message['isSystemMessage'] == true;
+    final isEdited = message['isEdited'] == true;
+    final readCount = message['readCount'] as int? ?? 0;
+    final senderName = message['sender']?.toString() ?? 'Unknown';
+    final avatar = message['avatar'] is String 
+        ? message['avatar']
+        : _getAvatarInitials(senderName);
+
+    if (isSystem) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        child: Text(
+          message['message']?.toString() ?? '',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              child: Text(
-                message['avatar'],
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
+              backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              backgroundImage: (message['avatar'] is String && message['avatar'].startsWith('http'))
+                  ? NetworkImage(message['avatar']) as ImageProvider<Object>?
+                  : null,
+              child: (message['avatar'] is String && message['avatar'].startsWith('http'))
+                  ? null
+                  : Text(
+                      avatar,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
             ),
             const SizedBox(width: 8),
           ],
@@ -202,9 +413,9 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
               children: [
                 if (!isMe)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.only(bottom: 2, left: 4),
                     child: Text(
-                      message['sender'],
+                      senderName,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -213,9 +424,12 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                     ),
                   ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.75,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isMe ? Theme.of(context).primaryColor : Colors.white,
+                    color: isMe ? Theme.of(context).primaryColor : Colors.grey[100],
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -224,26 +438,57 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 5,
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Text(
-                    message['message'],
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: isMe ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatTimestamp(timestamp),
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.grey[400],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        message['message']?.toString() ?? '',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: isMe ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _formatTimestamp(timestamp),
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              color: isMe ? Colors.white70 : Colors.grey[600],
+                            ),
+                          ),
+                          if (isEdited) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              'edited',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontStyle: FontStyle.italic,
+                                color: isMe ? Colors.white70 : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                          if (isMe) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              readCount > 0 ? Icons.done_all : Icons.done,
+                              size: 12,
+                              color: readCount > 0 
+                                  ? Colors.blue[200] 
+                                  : Colors.white54,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -253,9 +498,9 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 16,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+              backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
               child: Text(
-                message['avatar'],
+                _getAvatarInitials(senderName),
                 style: GoogleFonts.poppins(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
@@ -276,7 +521,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -400,12 +645,33 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(15),
-                        child: Image.network(
-                          widget.group['image'],
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                        ),
+                        child: widget.group['image'] != null && widget.group['image'].toString().isNotEmpty
+                            ? Image.network(
+                                widget.group['image'].toString(),
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    child: const Icon(Icons.group, size: 30),
+                                  );
+                                },
+                              )
+                            : Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: const Icon(Icons.group, size: 30),
+                              ),
                       ),
                       const SizedBox(width: 15),
                       Expanded(
@@ -413,7 +679,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.group['name'],
+                              widget.group['name']?.toString() ?? 'Unknown Group',
                               style: GoogleFonts.poppins(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
@@ -421,7 +687,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.group['description'],
+                              widget.group['description']?.toString() ?? 'No description',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 color: Colors.grey[600],
@@ -429,7 +695,7 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${widget.group['memberCount']} members',
+                              '${_getMemberCount()} members',
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: Colors.grey[500],

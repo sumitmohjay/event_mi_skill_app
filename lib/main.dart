@@ -1,5 +1,6 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:event_mi_skill/src/features/presentation/event_page.dart';
+import 'package:event_mi_skill/src/user_management/user_management_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -8,16 +9,19 @@ import 'src/features/presentation/auth/login_screen.dart';
 import 'src/features/presentation/auth/otp_verification_screen.dart';
 import 'src/features/presentation/home_page.dart';
 import 'src/features/presentation/event_organizer_profile_page.dart';
-import 'src/features/presentation/user_management_page.dart';
 import 'src/group_page/group_page.dart';
 import 'src/event_management/provider/event_provider.dart';
 import 'src/event_management/event_local_datasource.dart';
 import 'src/event_management/event_repository_impl.dart';
 import 'src/core/providers/user_profile_provider.dart';
+import 'src/group_page/provider/group_provider.dart';
 import 'src/core/services/auth_service.dart';
 import 'src/core/services/event_api_service.dart';
+import 'src/user_management/enrollment_api_service.dart';
+import 'src/user_management/enrollment_provider.dart';
 import 'src/core/api/api_client.dart';
 import 'src/widgets/app_header.dart';
+import 'src/core/providers/dashboard_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +50,10 @@ class MyApp extends StatelessWidget {
             // Auth Service Provider
             ProxyProvider<ApiClient, AuthService>(
               update: (_, apiClient, __) => AuthService(apiClient, sharedPreferences),
+            ),
+            // Dashboard Provider
+            ChangeNotifierProvider<DashboardProvider>(
+              create: (_) => DashboardProvider(),
             ),
             // Event API Service Provider
             ProxyProvider<ApiClient, EventApiService>(
@@ -77,6 +85,22 @@ class MyApp extends StatelessWidget {
               ),
               update: (_, authService, previous) => 
                   previous ?? UserProfileProvider(authService),
+            ),
+            // Group Provider
+            ChangeNotifierProvider<GroupProvider>(
+              create: (_) => GroupProvider(),
+            ),
+            // Enrollment API Service Provider
+            ProxyProvider<ApiClient, EnrollmentApiService>(
+              update: (_, apiClient, __) => EnrollmentApiService(apiClient),
+            ),
+            // Enrollment Provider
+            ChangeNotifierProxyProvider<EnrollmentApiService, EnrollmentProvider>(
+              create: (context) => EnrollmentProvider(
+                Provider.of<EnrollmentApiService>(context, listen: false),
+              ),
+              update: (_, enrollmentService, previous) => 
+                  previous ?? EnrollmentProvider(enrollmentService),
             ),
           ],
           child: MaterialApp(
@@ -138,7 +162,7 @@ class _MainPageState extends State<MainPage> {
   // List of pages for navigation
   final List<Widget> _pages = [
     const HomePage(),
-    const EventPage(),
+    // const EventPage(),
     const UserManagementPage(),
     const GroupPage(),
     const EventOrganizerProfilePage(),
@@ -148,7 +172,7 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     final items = <Widget>[
       const Icon(Icons.home_outlined, size: 30, color: Colors.white),
-      const Icon(Icons.event, size: 30, color: Colors.white),
+      // const Icon(Icons.event, size: 30, color: Colors.white),
       const Icon(Icons.person_outline, size: 30, color: Colors.white),
       const Icon(Icons.group_outlined, size: 30, color: Colors.white),
       const Icon(Icons.account_circle_outlined, size: 30, color: Colors.white),
